@@ -19,6 +19,7 @@ extern	void meminit(void);	/* Initializes the free memory list	*/
 /* Lab3. initializes data structures and necessary set ups for paging */
 static	void initialize_paging();
 
+
 /* Declarations of major kernel variables */
 
 struct	procent	proctab[NPROC];	/* Process table			*/
@@ -203,11 +204,37 @@ static	void	sysinit()
 
 	return;
 }
+void init_ipt(void){
+	int i;
+	for(i = 0; i < NFRAMES; i++){
+		ipt[i].status = NOT_USED;
+		ipt[i].pid 	  = NO_PROCESS;
+		ipt[i].vpn 	  = NO_VPN;
+	}
+}
 
 static void initialize_paging()
 {
-	/* LAB3 TODO */
+	kprintf("Initializing IPT\n");
+	// Initialize inverted page table
+	init_ipt();	
 
+	kprintf("Initializing pdir for null proc\n");
+	// Initialize pd for null process
+	init_pd(NULLPROC);
+
+	kprintf("Installing pf isr\n");
+	// Install the page fault interrupt service routine
+	set_evec(PF_INTERRUPT_NUM, (uint32)pf_dispatcher);
+
+	kprintf("load page dir for null proc\n");
+	// Load page directory for null process
+	loadPD(proctab[NULLPROC].pd);
+
+	kprintf("Enabling paging...\n");
+	// Enable paging
+	enablePaging();
+	kprintf("After enabling paging...\n");
 	return;
 }
 

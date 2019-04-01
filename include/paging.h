@@ -35,6 +35,9 @@ typedef struct {
 	unsigned int pt_base	: 20;		/* location of page?		*/
 } pt_t;
 
+/* Keeping track of physical frames */
+
+
 #define PAGEDIRSIZE	1024
 #define PAGETABSIZE	1024
 
@@ -54,6 +57,31 @@ typedef struct {
 #define MAX_ID		7		/* You get 8 mappings, 0 - 7 */
 #define MIN_ID		0
 
+#define DEV_MEM_PD_INDEX 		576
+#define NUM_GLOBAL_PDE 			4
+#define METADATA_START 			0x00400000
+#define PD_START 				METADATA_START
+#define PT_START 				(METADATA_START + NPROC*PAGEDIRSIZE)
+#define VIRTUAL_HEAP_START 		0x01000000
+#define DEV_MEM_START 			0x90000000
+
+#define PF_INTERRUPT_NUM		14
 extern int32	currpolicy;
+extern int32	pfErrCode;
+extern int32	cr2_val;
+
+
+void init_pd(pid32 pid);
+
+void pf_handler(void);
+void set_PTE_addr(pt_t* pt, char* addr);
+void set_PDE_addr(pd_t* pd, char* addr);
+void setup_id_paging(pt_t* pt, char* firstFrame);
+
+/* The following functions are defined in system/pg.S */
+extern void pf_dispatcher(void);
+extern void enablePaging(void); 			/* Enables paging 		*/
+extern void loadPD(pd_t*);				/* One argument (pd loc) and puts into CR3 reg */
+extern uint32 readCR2(void);
 
 #endif // __PAGING_H_

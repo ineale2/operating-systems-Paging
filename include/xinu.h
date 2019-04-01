@@ -3,6 +3,7 @@
 #include <kernel.h>
 #include <conf.h>
 #include <paging.h>
+#include <ipt.h>
 #include <process.h>
 #include <queue.h>
 #include <resched.h>

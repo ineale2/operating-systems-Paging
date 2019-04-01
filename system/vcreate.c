@@ -45,6 +45,9 @@ pid32	vcreate(
 	prcount++;
 	prptr = &proctab[pid];
 
+	/* Setup a flat memory model */
+	init_pd(pid);
+
 	/* Initialize process table entry for new process */
 	prptr->prstate = PR_SUSP;	/* Initial state is suspended	*/
 	prptr->prprio = priority;
