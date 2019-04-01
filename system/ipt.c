@@ -26,6 +26,7 @@ char* getNewFrame(uint32 type, pid32 pid, uint32 vpn){
 			ipt[fr].status 	= type;
 			ipt[fr].pid		= pid;
 			ipt[fr].vpn 	= vpn;
+			debug("getNewFrame: fr = %d\n", fr);
 			return frameNum2ptr(fr);
 		}
 		else{
@@ -51,7 +52,9 @@ char* getNewFrame(uint32 type, pid32 pid, uint32 vpn){
 char* frameNum2ptr(uint32 frameNum){
 	if(frameNum >= NFRAMES || frameNum < 0)
 		kprintf("Bad frame num: %d\n", frameNum);
-	return (char*)0x00400000 + frameNum*NBPG;
+	char* temp = (char*)0x00400000 + frameNum*NBPG;
+	debug("fr %d = 0x%x\n", frameNum, (void*)temp);
+	return temp;
 }
 
 status evictFrame(uint32 fr){

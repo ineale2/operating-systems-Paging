@@ -215,26 +215,36 @@ void init_ipt(void){
 
 static void initialize_paging()
 {
-	kprintf("Initializing IPT\n");
+	debug("Initializing IPT\n");
 	// Initialize inverted page table
 	init_ipt();	
 
-	kprintf("Initializing pdir for null proc\n");
+	debug("Initializing pdir for null proc\n");
 	// Initialize pd for null process
 	init_pd(NULLPROC);
 
-	kprintf("Installing pf isr\n");
+	debug("Installing pf isr\n");
 	// Install the page fault interrupt service routine
 	set_evec(PF_INTERRUPT_NUM, (uint32)pf_dispatcher);
 
-	kprintf("load page dir for null proc\n");
+	debug("load page dir for null proc\n");
 	// Load page directory for null process
+	debug("before loadPD: cr3 = 0x%x\n", readCR3());
 	loadPD(proctab[NULLPROC].pd);
+	debug("after loadPD: cr3 = 0x%x\n", readCR3());
+	debug("addr of pd = 0x%x\n", proctab[NULLPROC].pd);
+	uint32 temp; 
+	debug("before enPg: cr0 = %u\n", readCR0());
+	dump32(readCR0());
+	temp = enPg();
+	debug("after enPg:\n");
+	debug("cr0_future = %u\n", temp);
+	dump32(temp);
 
-	kprintf("Enabling paging...\n");
+	debug("Enabling paging...\n");
 	// Enable paging
 	enablePaging();
-	kprintf("After enabling paging...\n");
+	debug("After enabling paging...\n");
 	return;
 }
 

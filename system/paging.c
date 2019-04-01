@@ -7,8 +7,9 @@
 void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 	//global variable pfErrCode should be set by pf_dispatcher
 	
-	kprintf("In pf_handler\n");
-	kprintf("Error Code: %d\n", pfErrCode);	
+	debug("In pf_handler\n");
+	debug("Error Code: %d\n", pfErrCode);	
+	debug("CR2: %d\n", readCR2());
 	panic("Page fault\n");
 
 }
@@ -17,7 +18,7 @@ void init_pd(pid32 pid){
 
 	pd_t* pd = (pd_t*)getNewFrame(PDIR, pid, NO_VPN);
 	char* addr;
-	kprintf("init_pd: pid = %d\ninit_pd: pd start %p\n", pid, (void*)pd);
+	debug("init_pd: pid = %d\ninit_pd: pd start %x\n", pid, (void*)pd);
 	int  j;
 	pd_t* pd_ptr;
 	// Put location of page directory into proctab
@@ -38,7 +39,7 @@ void init_pd(pid32 pid){
 		pd_ptr->pd_avail	= 0;
 		pd_ptr->pd_base		= 0;
 	}
-	kprintf("init_pd: pd end  %p\n", (void*)&pd[PAGEDIRSIZE]);
+	debug("init_pd: pd end  %x\n", (void*)&pd[PAGEDIRSIZE]);
 
 	// Initialize global page tables (pages 0 to 4095)
 	for( j = 0; j < NUM_GLOBAL_PDE; j++){
@@ -48,6 +49,7 @@ void init_pd(pid32 pid){
 		//Allocate some space for a pt
 		addr = getNewFrame(PTAB, pid, NO_VPN);
 		set_PDE_addr(pd_ptr, addr); 
+		debug("pd[j].pd_base = 0x%x\n", pd[j].pd_base);
 		setup_id_paging((pt_t*)addr, (char*)(j << 22));
 			
 	}
@@ -82,7 +84,22 @@ void setup_id_paging(pt_t* pt, char* firstFrame){
 		set_PTE_addr(&pt[i], frameAddr);
 		
 		//Go to next frame
+		//debug("idpg: pte = %d frameAddr = 0x%x, pt[i].pt_base = 0x%x\n", i, frameAddr, pt[i].pt_base);
 		frameAddr += NBPG;
 	}
 
+}
+void dump32(unsigned long n) {
+  int i;
+
+  for(i = 31; i>=0; i--) {
+    kprintf("%02d ",i);
+  }
+
+  kprintf("\n");
+
+  for(i=31;i>=0;i--)
+    kprintf("%d  ", (n&(1<<i)) >> i);
+
+  kprintf("\n");
 }

@@ -1,5 +1,14 @@
 /* paging.h */
 
+/* Helpful control macros for debugging and printing */
+#define XDEBUG 		1
+
+#if XDEBUG
+#define debug(...) kprintf(__VA_ARGS__)
+#else
+#define debug(...) 
+#endif
+
 #ifndef __PAGING_H_
 #define __PAGING_H_
 
@@ -77,11 +86,15 @@ void pf_handler(void);
 void set_PTE_addr(pt_t* pt, char* addr);
 void set_PDE_addr(pd_t* pd, char* addr);
 void setup_id_paging(pt_t* pt, char* firstFrame);
+void dump32(unsigned long n);
 
 /* The following functions are defined in system/pg.S */
 extern void pf_dispatcher(void);
 extern void enablePaging(void); 			/* Enables paging 		*/
 extern void loadPD(pd_t*);				/* One argument (pd loc) and puts into CR3 reg */
 extern uint32 readCR2(void);
+extern uint32 readCR3(void);
+extern uint32 readCR0(void);
+extern uint32 enPg(void);
 
 #endif // __PAGING_H_
