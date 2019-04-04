@@ -234,12 +234,7 @@ static void initialize_paging()
 	debug("after loadPD: cr3 = 0x%x\n", readCR3());
 	debug("addr of pd = 0x%x\n", proctab[NULLPROC].pd);
 
-	printPD(proctab[currpid].pd);
-	printPT((pt_t*)0x00401000);	
-	printPT((pt_t*)0x00402000);	
-	printPT((pt_t*)0x00403000);	
-	printPT((pt_t*)0x00404000);	
-
+	dumpmem();
 
 	uint32 temp; 
 	debug("before enPg: cr0 = %u\n", readCR0());

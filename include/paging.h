@@ -105,5 +105,6 @@ uint32 vaddr2offset(char* vaddr);
 uint32 pde2pdi(pd_t* pd);
 uint32 pte2pti(pt_t* pt);
 
+void dumpmem(void);
 
 #endif // __PAGING_H_

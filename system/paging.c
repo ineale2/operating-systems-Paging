@@ -37,6 +37,17 @@ void printPT(pt_t* pt_ptr){
 		debug("PTE %04d: 0x%x %d %d\n", i, pt->pt_base << 12, pt->pt_pres, pt->pt_write);
 	}
 }
+
+void dumpmem(void){
+	kprintf("dumping mem\n");
+	uint32* p = (uint32*)(0x00400000);
+	while(p < (uint32*)0x00406000){
+		kprintf("0x%x:0x%x\n", p, *p);
+		p = p + 1;	
+	}
+	kprintf("dump finished\n");
+}
+
 void init_pd(pid32 pid){
 
 	pd_t* pd = (pd_t*)getNewFrame(PDIR, pid, NO_VPN);
