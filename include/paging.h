@@ -61,6 +61,7 @@ uint32 dpt;
 void init_gpt(void);
 void walkPDIR(void);
 char* vaddr2paddr(uint32* vaddr);
+void dumpmem(void){
 
 extern void enablePaging(void);
 extern void loadPD(uint32*);

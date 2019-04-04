@@ -13,7 +13,7 @@ void init_gpt(void){
 	uint32* curr_pt;
 	for(i = 0; i<4; i++){
 		pd[i] = (gpt[i] | 3);
-		kprintf("pd[%d] = 0x%x\n", i, pd[i]);
+		//kprintf("pd[%d] = 0x%x\n", i, pd[i]);
 		curr_pt = (uint32*)gpt[i];
 		for( j = 0; j < PAGETABSIZE; j++){
 			curr_pt[j] = (i*PAGETABSIZE + j) << 12;
@@ -22,16 +22,29 @@ void init_gpt(void){
 		}
 	}
 	pd[576] = dpt | 3;
-	kprintf("pd[576] = 0x%x\n", pd[576]);
+	//kprintf("pd[576] = 0x%x\n", pd[576]);
 	i = 576;
 	curr_pt = (uint32*)dpt;
 	for( j = 0; j < PAGETABSIZE; j++){
 		curr_pt[j] = (i*PAGETABSIZE + j) << 12;
 		curr_pt[j] |= 3;
 	}
-	kprintf("Walking PDIR\n");
-	walkPDIR();
-	kprintf("Done walking PDIR\n");
+	//kprintf("Walking PDIR\n");
+	//walkPDIR();
+	//kprintf("Done walking PDIR\n");
+	dumpmem();
+}
+
+void dumpmem(void){
+	kprintf("dumping mem\n");
+	uint32* p = (uint32*)(0x00400000);
+	while(p < (uint32*)0x00406000){
+		kprintf("0x%x:0x%x\n", p, *p);
+		p = p + 1;	
+	}
+	kprintf("dump finished\n");
+
+
 }
 
 void walkPDIR(void){
