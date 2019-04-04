@@ -65,8 +65,64 @@ void init_pd(pid32 pid){
 
 }
 
+void walkPDIR(void){
+	char* vaddr = 0x00000000;
+	debug("walking pdir of pid = %d\n", currpid);
+	uint32 counter = 0;
+	
+	while(vaddr < (char*)0x00FFFFFF){
+		vaddr2paddr(vaddr);
+		vaddr = vaddr + 1;
+		counter++;
+		if(counter%1000000 == 0){
+			debug("0x%x\n", vaddr);
+		}
+	}
+	vaddr = (char*)0x90000000;
+	while(vaddr < (char*)0x903FFFFF){
+		vaddr2paddr(vaddr);
+		vaddr = vaddr + 1;
+		counter++;
+		if(counter%1000000 == 0){
+			debug("0x%x\n", vaddr);
+		}
+	}
+
+
+}
+
+char* vaddr2paddr(char* vaddr){
+	char* paddr;
+	pd_t* pd = proctab[currpid].pd;
+	pt_t* pt;
+	uint32 pdi, pti;
+	uint32 offset;
+
+	offset = vaddr2offset(vaddr); 
+	pdi = vaddr2pdi(vaddr);
+	pti = vaddr2pti(vaddr);
+	pt  = (pt_t*)(pd[pdi].pd_base << 12); 
+	paddr = (char*)(pt[pti].pt_base << 12);
+	paddr =(char*)( (uint32)paddr | offset);
+	
+	if(vaddr != paddr){
+		debug("==================================\n");
+		debug("vaddr: 0x%x paddr: 0x%x\n", vaddr, paddr);
+		debug("pdi: %d, pti: %d, offset: %d\n", pdi, pti, offset);
+		debug("pt = 0x%x, pte = 0x%x\n", pt, (char*)(pt[pti].pt_base << 12));
+		debug("vaddr:\n");
+		dump32((long)vaddr);
+		debug("pte:\n");
+		dump32((long)pt[pti].pt_base << 12);
+		debug("==================================\n\n\n");
+	}
+	return paddr;
+
+}
+
 void set_PTE_addr(pt_t* pt, char* addr){
 	pt->pt_base = (uint32)addr >> 12;
+//	debug("setPTEaddr: addr = 0x%x, pt_base = 0x%x\n", addr, pt->pt_base);
 }
 
 void set_PDE_addr(pd_t* pd, char* addr){
@@ -85,6 +141,7 @@ void setup_id_paging(pt_t* pt, char* firstFrame){
 		
 		//Go to next frame
 		//debug("idpg: pte = %d frameAddr = 0x%x, pt[i].pt_base = 0x%x\n", i, frameAddr, pt[i].pt_base);
+		vaddr2paddr(frameAddr);
 		frameAddr += NBPG;
 	}
 
@@ -103,3 +160,24 @@ void dump32(unsigned long n) {
 
   kprintf("\n");
 }
+
+uint32 vaddr2offset(char* vaddr){
+	return ((uint32)vaddr & 0x00000FFF);
+}
+
+uint32 vaddr2pdi(char* vaddr){
+	return ((uint32)vaddr & 0xFFC00000) >> 22;
+}
+
+uint32 vaddr2pti(char* vaddr){
+	return ((uint32)vaddr & 0x003FF000) >> 12;
+}
+
+uint32 pde2pdi(pd_t* pd){
+	return (pd->pd_base & 0xFFC00) >> 10;
+}
+
+uint32 pte2pti(pt_t* pt){
+	return (pt->pt_base & 0x003FF);
+}
+

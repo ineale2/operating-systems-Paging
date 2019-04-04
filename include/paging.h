@@ -77,7 +77,6 @@ typedef struct {
 #define PF_INTERRUPT_NUM		14
 extern int32	currpolicy;
 extern int32	pfErrCode;
-extern int32	cr2_val;
 
 
 void init_pd(pid32 pid);
@@ -87,6 +86,8 @@ void set_PTE_addr(pt_t* pt, char* addr);
 void set_PDE_addr(pd_t* pd, char* addr);
 void setup_id_paging(pt_t* pt, char* firstFrame);
 void dump32(unsigned long n);
+void walkPDIR(void);
+char* vaddr2paddr(char* vaddr);
 
 /* The following functions are defined in system/pg.S */
 extern void pf_dispatcher(void);
@@ -96,5 +97,13 @@ extern uint32 readCR2(void);
 extern uint32 readCR3(void);
 extern uint32 readCR0(void);
 extern uint32 enPg(void);
+
+/* PDIR and PTAB conversion functions */
+uint32 vaddr2pdi(char* vaddr);
+uint32 vaddr2pti(char* vaddr);
+uint32 vaddr2offset(char* vaddr);
+uint32 pde2pdi(pd_t* pd);
+uint32 pte2pti(pt_t* pt);
+
 
 #endif // __PAGING_H_

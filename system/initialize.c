@@ -240,6 +240,9 @@ static void initialize_paging()
 	debug("after enPg:\n");
 	debug("cr0_future = %u\n", temp);
 	dump32(temp);
+	debug("Calling walkPDIR()\n");
+	walkPDIR();
+	debug("Finished walkPDIR()\n");
 
 	debug("Enabling paging...\n");
 	// Enable paging
