@@ -230,7 +230,7 @@ static void initialize_paging()
 	debug("load page dir for null proc\n");
 	// Load page directory for null process
 	debug("before loadPD: cr3 = 0x%x\n", readCR3());
-	loadPD( (pd_t*)((uint32)(proctab[NULLPROC].pd)/NBPG) );
+	loadPD(proctab[NULLPROC].pd);
 	debug("after loadPD: cr3 = 0x%x\n", readCR3());
 	debug("addr of pd = 0x%x\n", proctab[NULLPROC].pd);
 

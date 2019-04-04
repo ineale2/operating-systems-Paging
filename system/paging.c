@@ -170,14 +170,28 @@ void setup_id_paging(pt_t* pt, char* firstFrame){
 	int i;
 	//Only look at base address... get rid of lower bits. 
 	char* frameAddr = (char*)((uint32) firstFrame & 0xfffff000);
+	//uint32* temp;
 	for(i = 0; i< PAGETABSIZE; i++){
+		//temp = (uint32*)(&pt[i]);
+		//kprintf("==============\n");
 		pt[i].pt_pres 	= 1;
 		pt[i].pt_write 	= 1;
+		pt[i].pt_user	= 0;
+		pt[i].pt_pwt 	= 0;
+		pt[i].pt_pcd 	= 0;
+		pt[i].pt_acc 	= 0;
+		pt[i].pt_dirty  = 0;
+		pt[i].pt_mbz 	= 0;
+		pt[i].pt_global = 0;
+		pt[i].pt_avail 	= 0;
+	
 		set_PTE_addr(&pt[i], frameAddr);
-		
-		//Go to next frame
+		//kprintf("After  Addr: 0x%x :: Data: 0x%x\n", temp, *temp);
 		//debug("idpg: pte = %d frameAddr = 0x%x, pt[i].pt_base = 0x%x\n", i, frameAddr, pt[i].pt_base);
 		//debug("pt[%d].pt_base = %d\n", i, pt[i].pt_base);
+		
+		//kprintf("==============\n\n");
+		//Go to next frame
 		vaddr2paddr(frameAddr);
 		frameAddr += NBPG;
 	}
