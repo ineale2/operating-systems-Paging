@@ -14,6 +14,29 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 
 }
 
+void printPD(pd_t* pd_ptr){
+
+	int i;
+	pd_t* pd;
+	debug("PDE NUM :  PT Addr  :P:W\n");
+	debug("-------   ---------- - -\n"); 
+	for(i = 0; i< PAGEDIRSIZE; i++){
+		pd = &pd_ptr[i];
+		debug("PDE %04d: 0x%x %d %d\n", i, pd->pd_base << 12, pd->pd_pres, pd->pd_write);
+	}
+
+}
+
+void printPT(pt_t* pt_ptr){
+	int i;
+	pt_t* pt;
+	debug("PTE NUM :  FR Addr  :P:W\n");
+	debug("-------   ---------- - -\n"); 
+	for(i = 0; i< PAGETABSIZE; i++){
+		pt = &pt_ptr[i];
+		debug("PTE %04d: 0x%x %d %d\n", i, pt->pt_base << 12, pt->pt_pres, pt->pt_write);
+	}
+}
 void init_pd(pid32 pid){
 
 	pd_t* pd = (pd_t*)getNewFrame(PDIR, pid, NO_VPN);
@@ -50,6 +73,8 @@ void init_pd(pid32 pid){
 		addr = getNewFrame(PTAB, pid, NO_VPN);
 		set_PDE_addr(pd_ptr, addr); 
 		debug("pd[j].pd_base = 0x%x\n", pd[j].pd_base);
+		debug("DEBUG: pdb  = %d\n",  pd[j].pd_base);
+		debug("DEBUG: addr = %d\n",((uint32) addr)/4096);
 		setup_id_paging((pt_t*)addr, (char*)(j << 22));
 			
 	}
@@ -141,6 +166,7 @@ void setup_id_paging(pt_t* pt, char* firstFrame){
 		
 		//Go to next frame
 		//debug("idpg: pte = %d frameAddr = 0x%x, pt[i].pt_base = 0x%x\n", i, frameAddr, pt[i].pt_base);
+		//debug("pt[%d].pt_base = %d\n", i, pt[i].pt_base);
 		vaddr2paddr(frameAddr);
 		frameAddr += NBPG;
 	}
