@@ -55,5 +55,16 @@ typedef struct {
 #define MIN_ID		0
 
 extern int32	currpolicy;
+uint32 gpt[4];
+uint32* pd;
+uint32 dpt;
+void init_gpt(void);
+void walkPDIR(void);
+char* vaddr2paddr(uint32* vaddr);
+
+extern void enablePaging(void);
+extern void loadPD(uint32*);
+extern uint32 readCR3(void);
+extern uint32 readCR0(void);
 
 #endif // __PAGING_H_

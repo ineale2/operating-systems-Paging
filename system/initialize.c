@@ -207,6 +207,18 @@ static	void	sysinit()
 static void initialize_paging()
 {
 	/* LAB3 TODO */
+	init_gpt();
+
+	kprintf("CR3: %d\n", readCR3());
+	kprintf("CR0: %d\n", readCR0());
+	kprintf("Setting CR3 to 0x%x\n", pd);
+	loadPD(pd);
+	kprintf("CR3: %d\n", readCR3());
+
+	kprintf("Enabling paging\n");
+	enablePaging();
+	kprintf("Done!\n");
+
 
 	return;
 }
