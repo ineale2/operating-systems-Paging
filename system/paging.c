@@ -5,6 +5,7 @@
 //TODO: Remove vaddr2paddr calls
 //TODO: Think about interrupts disabling and enabling
 //TODO: For pf_handler with new page table, do you also get frame for data?
+//TODO: write newPageTable
 
 // Page fault handler. Called by pf_dispatcher (declared in pg.S)
 void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
@@ -21,7 +22,7 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 	debug("Error Code: %d\n", pfErrCode);	
 	debug("CR2: 0x%x\n", readCR2());
 	//Get the faulted address
-	a = readCR2();
+	a = (char*)readCR2();
 	pd = proctab[currpid].pd;
 
 	//If the address is invalid, kill the process
@@ -52,7 +53,7 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 		// Using the backing store map, find the store s and page offset o which correspond to pti
 		get_bs_info(currpid, a, &bsd, &offset);
 		// Increment reference count of the frame that holds pt
-		incRefCount(fr);
+		incRefCount(pt);
 		// Obtain a free frame
 		faddr = getNewFrame(PAGE, currpid, pti);		
 		// Copy the page in the backing store to the new frame
@@ -68,6 +69,7 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 		panic("Bad news bears\n");
 	} 
 }
+
 
 void init_gpt(){
 	// Initialize global page tables (pages 0 to 4095)
@@ -160,11 +162,13 @@ void init_pd(pid32 pid){
 		set_PDE_addr(&pd[j], gpt[j]);
 		pd[j].pd_write 		= 1;
 		pd[j].pd_pres 		= 1;
+		pd[j].pd_global 	= 1;
 	}
 	//Set device page table
 	set_PDE_addr(&pd[DEV_MEM_PD_INDEX], dpt);
 	pd[DEV_MEM_PD_INDEX].pd_write 		= 1;
 	pd[DEV_MEM_PD_INDEX].pd_pres 		= 1;
+	pd[DEV_MEM_PD_INDEX].pd_global 		= 1;
 	debug("init_pd: pd end  %x\n", (void*)&pd[PAGEDIRSIZE]);
 
 
@@ -307,3 +311,7 @@ void dumpmem(void){
 	kprintf("dump finished\n");
 }
 
+int  isInvalidAddr(char* a, pid32 pid){
+	panic("Invalid address not written\n");
+	return 1;
+}

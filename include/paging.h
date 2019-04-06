@@ -88,11 +88,13 @@ void pf_handler(void);
 /* Helper functions */
 void set_PTE_addr(pt_t* pt, char* addr);
 void set_PDE_addr(pd_t* pd, char* addr);
+int  isInvalidAddr(char* a, pid32 pid);
 
 /* Initialization functions */
-void setup_id_paging(pt_t* pt, char* firstFrame);
-void init_pd(pid32 pid);
-void init_gpt(void);
+void  setup_id_paging(pt_t* pt, char* firstFrame);
+void  init_pd(pid32 pid);
+void  init_gpt(void);
+pt_t* newPageTable(pid32);
 
 /* Assembly functions,  defined in system/pg.S */
 extern void pf_dispatcher(void);

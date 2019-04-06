@@ -1,16 +1,16 @@
 #include <xinu.h>
 
-//TODO: When killed, remove frames from fifo queue
 //TODO: Think of other scenarios when frame has to change
 //TODO: Remove all panic() statements that are not necessary
+//TODO: Retry networking instructions
 
 void freeFrame(uint32 fr){
 	// Mark the frame as free
-	if(currPolicy == FIFO && ipt[fr].status == PAGE){
+	if(currpolicy == FIFO && ipt[fr].status == PAGE){
 		//Remove from the queue
 		freeFrameFIFO(fr);
 	}
-	else if(currPolicy == GCA && ipt[fr].status == PAGE){
+	else if(currpolicy == GCA && ipt[fr].status == PAGE){
 		freeFrameGCA(fr);
 	}
 	clearFrame(fr);
@@ -71,12 +71,10 @@ char* getNewFrame(uint32 type, pid32 pid, uint32 vpn){
 		}
 	}
 
-	/* No frames are free */
-	//TODO: Error checking for network failures
-	// Select a frame to evict...
+	// No frames are free, select a frame to evict
 	fr = pickFrame(); 
 
-	// Evict the frame...
+	// Evict the frame
 	evictFrame(fr, pid);
 
 	// Initialize the new frame
@@ -101,15 +99,15 @@ void init_frame(uint32 fr, uint32 type, pid32 pid, uint32 vpn){
 	ipt[fr].prevFrame	= EMPTY;
 
 	/* If the frame is used for a page, then add the frame number to the queue */
-	if(type == PAGE && currPolicy == FIFO){
-		init_frame_FIFO(fr, type, pid, vpn);
+	if(type == PAGE && currpolicy == FIFO){
+		init_frame_FIFO(fr);
 	}
-	else if(type == PAGE &&  currPolicy == GCA){
-		init_frame_GCA(fr, type, pid, vpn);
+	else if(type == PAGE &&  currpolicy == GCA){
+		init_frame_GCA(fr);
 	}
 }
 
-void init_frame_FIFO(uint32 fr, uint32 type, uint32 pid, uint32 vpn){
+void init_frame_FIFO(uint32 fr){
 	if(flistHead == EMPTY && flistTail == EMPTY){
 		flistHead = fr;
 		flistTail = fr;
@@ -123,7 +121,7 @@ void init_frame_FIFO(uint32 fr, uint32 type, uint32 pid, uint32 vpn){
 	}
 }
 
-void init_frame_GCA(uint32 fr, uint32 type, uint32 pid, uint32 vpn){
+void init_frame_GCA(uint32 fr){
 	return;
 }
 
@@ -164,7 +162,7 @@ void evictFrame(uint32 fr, pid32 pid){
 	// Write page out to disk if necessary
 	if(pt[pti].pt_dirty == 1){
 		faddr = frameNum2ptr(fr);	
-		s = get_bs_info(pid, char* vaddr, &bsd, &offset){
+		s = get_bs_info(pid, a, &bsd, &offset);
 		if(s == SYSERR){
 			kprintf("Dirty page not found in backing store, killing process %d\n", pid);
 			kill(pid);
@@ -175,8 +173,6 @@ void evictFrame(uint32 fr, pid32 pid){
 			panic("write_bs failed\n");
 		}
 	}
-
-	return OK;
 }
 
 void decRefCount(pt_t* pt, pd_t* pd, uint32 pdi){
@@ -220,7 +216,7 @@ uint32 pickFrameFIFO(void){
 void init_ipt(void){
 	int i;
 	for(i = 0; i < NFRAMES; i++){
-		clearFrame(fr);
+		clearFrame(i);
 	}
 }
 
@@ -249,11 +245,11 @@ uint32 pickFrameGCA(void){
 
 uint32 pickFrame(void){
 	uint32 fr;
-	if(currPolicy == FIFO){
-		fr = pickFrameFIFO(void);
+	if(currpolicy == FIFO){
+		fr = pickFrameFIFO();
 	}
 	else{
-		fr = pickFrameGCA(void);
+		fr = pickFrameGCA();
 	}
 	return fr;
 }

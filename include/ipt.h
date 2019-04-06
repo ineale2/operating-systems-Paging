@@ -15,8 +15,10 @@
 #define PAGE		3
 
 /* Frame FIFO Queue */
-#define EMPTY 		-1
 
+#ifndef EMPTY
+#define EMPTY 	-1
+#endif
 /* Inverted page table data structure */
 
 typedef struct {
@@ -31,20 +33,20 @@ typedef struct {
 frame_t ipt[NFRAMES];
 
 //Head and tail of FIFO queue for frame replacement
-uint32 flistHead = EMPTY;
-uint32 flistTail = EMPTY;
+uint32 flistHead;
+uint32 flistTail;
 
 /* Frame allocation/freeing functions */
 char* getNewFrame(uint32 type, pid32 pid, uint32 vpn);
 void  freeFrame(uint32 fr);
 void  freeFrameFIFO(uint32 fr);
 void  freeFrameGCA(uint32 fr);
-void freeProcFrames(pid32 pid);
+void  freeProcFrames(pid32 pid);
 
 /* Initialization functions */
 void init_frame(uint32 fr, uint32 type, pid32 pid, uint32 vpn);
-void init_frame_FIFO(uint32 fr, uint32 type, pid32 pid, uint32 vpn);
-void init_frame_GCA(uint32 fr, uint32 type, pid32 pid, uint32 vpn);
+void init_frame_FIFO(uint32 fr);
+void init_frame_GCA(uint32 fr);
 void init_ipt(void);
 
 /* Frame replacement functions */
@@ -57,6 +59,6 @@ uint32 pickFrameFIFO(void);
 status get_bs_info(pid32 pid, char* vaddr, bsd_t* bsd, uint32* offset);
 char*  frameNum2ptr(uint32 frameNum);
 void   incRefCount(pt_t* pt);
-void   decRefCount(pt_t* pt);
+void   decRefCount(pt_t* pt, pd_t* pd, uint32 pdi);
 void   clearFrame(uint32 fr);
 #endif // __IPT_H_

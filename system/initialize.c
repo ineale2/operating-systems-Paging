@@ -208,7 +208,9 @@ static	void	sysinit()
 static void initialize_paging()
 {
 	// Set default page replacement policy
-	currPolicy = FIFO;
+	currpolicy = FIFO;
+	flistHead = EMPTY;
+	flistTail = EMPTY;
 
 	debug("Initializing IPT\n");
 	// Initialize inverted page table
@@ -234,13 +236,8 @@ static void initialize_paging()
 
 	//dumpmem();
 
-	uint32 temp; 
 	debug("before enPg: cr0 = %u\n", readCR0());
 	dump32(readCR0());
-	temp = enPg();
-	debug("after enPg:\n");
-	debug("cr0_future = %u\n", temp);
-	dump32(temp);
 	debug("Calling walkPDIR()\n");
 	walkPDIR();
 	debug("Finished walkPDIR()\n");

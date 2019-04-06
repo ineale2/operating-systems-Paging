@@ -8,7 +8,9 @@
 #define NQENT	(NPROC + 4 + NSEM + NSEM)
 #endif
 
+#ifndef EMPTY
 #define	EMPTY	(-1)		/* Null value for qnext or qprev index	*/
+#endif
 #define	MAXKEY	0x7FFFFFFF	/* Max key that can be stored in queue	*/
 #define	MINKEY	0x80000000	/* Min key that can be stored in queue	*/
 

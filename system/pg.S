@@ -22,7 +22,7 @@ pf_dispatcher:
 
 invalPage:
 	movl 4(%esp), %eax
-	invlpg %eax
+	invlpg (%eax)
 	ret 
 
 enablePaging:
