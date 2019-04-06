@@ -2,7 +2,7 @@
 #define __IPT_H_
 
 /* PID options */
-#define NO_PROCESS -1
+#define GLOBAL -1
 
 /* VPN options */
 #define NO_VPN   -1

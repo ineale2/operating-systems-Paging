@@ -219,6 +219,9 @@ static void initialize_paging()
 	// Initialize inverted page table
 	init_ipt();	
 
+	debug("Init global page tables\n");
+	init_gpt();
+
 	debug("Initializing pdir for null proc\n");
 	// Initialize pd for null process
 	init_pd(NULLPROC);
@@ -234,7 +237,7 @@ static void initialize_paging()
 	debug("after loadPD: cr3 = 0x%x\n", readCR3());
 	debug("addr of pd = 0x%x\n", proctab[NULLPROC].pd);
 
-	dumpmem();
+	//dumpmem();
 
 	uint32 temp; 
 	debug("before enPg: cr0 = %u\n", readCR0());

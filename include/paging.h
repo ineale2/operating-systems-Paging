@@ -67,7 +67,7 @@ typedef struct {
 #define MIN_ID		0
 
 #define DEV_MEM_PD_INDEX 		576
-#define NUM_GLOBAL_PDE 			4
+#define NUM_GLOBAL_PT 			4
 #define METADATA_START 			0x00400000
 #define PD_START 				METADATA_START
 #define PT_START 				(METADATA_START + NPROC*PAGEDIRSIZE)
@@ -78,8 +78,13 @@ typedef struct {
 extern int32	currpolicy;
 extern int32	pfErrCode;
 
+/* 4 global page tables */
+char* gpt[NUM_GLOBAL_PT];
+/* Global device page table */
+char* dpt; 
 
 void init_pd(pid32 pid);
+void init_gpt(void);
 
 void pf_handler(void);
 void set_PTE_addr(pt_t* pt, char* addr);
