@@ -204,17 +204,12 @@ static	void	sysinit()
 
 	return;
 }
-void init_ipt(void){
-	int i;
-	for(i = 0; i < NFRAMES; i++){
-		ipt[i].status = NOT_USED;
-		ipt[i].pid 	  = NO_PROCESS;
-		ipt[i].vpn 	  = NO_VPN;
-	}
-}
 
 static void initialize_paging()
 {
+	// Set default page replacement policy
+	currPolicy = FIFO;
+
 	debug("Initializing IPT\n");
 	// Initialize inverted page table
 	init_ipt();	
