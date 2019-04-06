@@ -34,7 +34,7 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 	//Convert to pti and pdi
 	pti = vaddr2pti(a);
 	pdi = vaddr2pdi(a);
-	pt  = pd[pdi].pd_base << 12;
+	pt  = pdi2pt(pd, pdi);
 
 	// Need to handle two cases:
 	// (1) Page table is not present and needs to be allocated
@@ -62,6 +62,7 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 		}
 		// Update the page table entry, point it to the frame and set bits	
 		pt[pti].pt_pres = 1;
+		set_PTE_addr(&pt[pti], faddr);
 	}
 	else{
 		panic("Bad news bears\n");
@@ -260,7 +261,9 @@ uint32 vaddr2pdi(char* vaddr){
 uint32 vaddr2pti(char* vaddr){
 	return ((uint32)vaddr & 0x003FF000) >> 12;
 }
-
+pt_t* pdi2pt(pd_t* pd, uint32 pdi){
+	return (pt_t*)(pd[pdi].pd_base << 12);
+}
 uint32 pde2pdi(pd_t* pd){
 	return (pd->pd_base & 0xFFC00) >> 10;
 }

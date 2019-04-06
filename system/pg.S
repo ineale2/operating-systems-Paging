@@ -5,7 +5,7 @@
 	.globl  readCR2					/* Returns cr2 register */
 	.globl	readCR3
 	.globl	readCR0
-	.globl	enPg
+	.globl	invalPage
 
 pf_dispatcher:
 	cli		
@@ -20,6 +20,11 @@ pf_dispatcher:
 	sti
 	iret
 
+invalPage:
+	movl 4(%esp), %eax
+	invlpg %eax
+	ret 
+
 enablePaging:
 	movl %cr0, %eax
 	orl	 $0x80000001, %eax /* Set PE and PG bits to enable paging and enter protected mode */
@@ -30,12 +35,6 @@ loadPD:
 	movl 4(%esp), %eax 
 	movl %eax, %cr3
 	ret
-
-enPg:
-	movl %cr0, %eax
-	orl	 $0x80000001, %eax /* Set PE and PG bits to enable paging and enter protected mode */
-	ret
-	
 
 readCR0:
 	movl %cr0, %eax

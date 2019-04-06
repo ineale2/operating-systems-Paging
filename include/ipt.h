@@ -2,7 +2,8 @@
 #define __IPT_H_
 
 /* PID options */
-#define GLOBAL -1
+#define GLOBAL 		-1
+#define NO_PROCESS  -2
 
 /* VPN options */
 #define NO_VPN   -1
@@ -13,33 +14,49 @@
 #define PTAB		2
 #define PAGE		3
 
+/* Frame FIFO Queue */
+#define EMPTY 		-1
+
 /* Inverted page table data structure */
 
 typedef struct {
-	uint32  nextFrameFIFO;
+	uint32  nextFrame;		// Used when frame status is PAGE
+	uint32  prevFrame;		// Used when frame status is PAGE
 	int16	status;
 	pid32 	pid;
 	uint32  vpn;
-	uint32 	refCount;
+	uint32 	refCount; 		// When frame status is PTAB, this is the number of pages that are in memory
 } frame_t;
 
 frame_t ipt[NFRAMES];
 
+//Head and tail of FIFO queue for frame replacement
+uint32 flistHead = EMPTY;
+uint32 flistTail = EMPTY;
+
+/* Frame allocation/freeing functions */
 char* getNewFrame(uint32 type, pid32 pid, uint32 vpn);
+void  freeFrame(uint32 fr);
+void  freeFrameFIFO(uint32 fr);
+void  freeFrameGCA(uint32 fr);
+void freeProcFrames(pid32 pid);
 
-char* frameNum2ptr(uint32 frameNum);
+/* Initialization functions */
+void init_frame(uint32 fr, uint32 type, pid32 pid, uint32 vpn);
+void init_frame_FIFO(uint32 fr, uint32 type, pid32 pid, uint32 vpn);
+void init_frame_GCA(uint32 fr, uint32 type, pid32 pid, uint32 vpn);
+void init_ipt(void);
 
-void freeFrameNum(uint32 frnum);
-void freeFrameAddr(char* fraddr);
-void get_bs_info(pid32 pid, char* vaddr, bsd_t* bsd, uint32* offset);
-
+/* Frame replacement functions */
+void   evictFrame(uint32 fr, pid32 pid);
 uint32 pickFrame(void);
-void init_frame(uint32 fr, type, pid, vpn);
-status evictFrame(uint32);
-
 uint32 pickFrameGCA(void); 
 uint32 pickFrameFIFO(void); 
 
-//Head of FIFO queue for frame replacement
-uint32 fList;
+/* Helper functions */
+status get_bs_info(pid32 pid, char* vaddr, bsd_t* bsd, uint32* offset);
+char*  frameNum2ptr(uint32 frameNum);
+void   incRefCount(pt_t* pt);
+void   decRefCount(pt_t* pt);
+void   clearFrame(uint32 fr);
 #endif // __IPT_H_

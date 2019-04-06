@@ -69,8 +69,6 @@ typedef struct {
 #define DEV_MEM_PD_INDEX 		576
 #define NUM_GLOBAL_PT 			4
 #define METADATA_START 			0x00400000
-#define PD_START 				METADATA_START
-#define PT_START 				(METADATA_START + NPROC*PAGEDIRSIZE)
 #define VIRTUAL_HEAP_START 		0x01000000
 #define DEV_MEM_START 			0x90000000
 
@@ -83,33 +81,40 @@ char* gpt[NUM_GLOBAL_PT];
 /* Global device page table */
 char* dpt; 
 
+
+/* Interrupt handler for page faults */
+void pf_handler(void);
+
+/* Helper functions */
+void set_PTE_addr(pt_t* pt, char* addr);
+void set_PDE_addr(pd_t* pd, char* addr);
+
+/* Initialization functions */
+void setup_id_paging(pt_t* pt, char* firstFrame);
 void init_pd(pid32 pid);
 void init_gpt(void);
 
-void pf_handler(void);
-void set_PTE_addr(pt_t* pt, char* addr);
-void set_PDE_addr(pd_t* pd, char* addr);
-void setup_id_paging(pt_t* pt, char* firstFrame);
-void dump32(unsigned long n);
-void walkPDIR(void);
-char* vaddr2paddr(char* vaddr);
-
-/* The following functions are defined in system/pg.S */
+/* Assembly functions,  defined in system/pg.S */
 extern void pf_dispatcher(void);
-extern void enablePaging(void); 			/* Enables paging 		*/
-extern void loadPD(pd_t*);				/* One argument (pd loc) and puts into CR3 reg */
+extern void enablePaging(void); 		/* Enables paging 									*/
+extern void loadPD(pd_t*);				/* One argument (pd loc) and puts into CR3 reg	    */
+extern void invalPage(char*);
 extern uint32 readCR2(void);
 extern uint32 readCR3(void);
 extern uint32 readCR0(void);
-extern uint32 enPg(void);
 
 /* PDIR and PTAB conversion functions */
 uint32 vaddr2pdi(char* vaddr);
 uint32 vaddr2pti(char* vaddr);
 uint32 vaddr2offset(char* vaddr);
+pt_t*  pdi2pt(pd_t* pd, uint32 pdi);
 uint32 pde2pdi(pd_t* pd);
 uint32 pte2pti(pt_t* pt);
 
+/* Functions for debugging */
 void dumpmem(void);
+void dump32(unsigned long n);
+void walkPDIR(void);
+char* vaddr2paddr(char* vaddr);
 
 #endif // __PAGING_H_
