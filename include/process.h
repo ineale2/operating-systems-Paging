@@ -37,6 +37,9 @@
 
 #define NDESC		5	/* must be odd to make procent 4N bytes	*/
 
+#define VHEAP		1
+#define NO_VHEAP    0
+
 #ifndef memblkstructure
 #define memblkstructure
 
@@ -63,6 +66,10 @@ struct procent {		/* Entry in the process table		*/
 
   /* Lab3 TODO: add more structures as required for vheap etc. */
 	pd_t	*pd; 		/* Location of page directory for this process */
+	memblk  vmemlist;   /* Head of virtual memory free list */
+	uint32	hsize; 		/* Size of vheap in number of pages */
+	bool8   vh;			/* Does this process have a virtual heap? */
+	
 };
 
 /* Marker for the top of a process stack (used to help detect overflow)	*/

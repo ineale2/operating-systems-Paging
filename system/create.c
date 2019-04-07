@@ -45,6 +45,9 @@ pid32	create(
 
 	/* Setup a flat memory model */
 	init_pd(pid);
+	
+	prptr->vh 		= NO_VHEAP;
+	prptr->hsize 	= 0;
 
 	/* Initialize process table entry for new process */
 	prptr->prstate = PR_SUSP;	/* Initial state is suspended	*/

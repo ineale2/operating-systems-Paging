@@ -69,8 +69,10 @@ typedef struct {
 #define DEV_MEM_PD_INDEX 		576
 #define NUM_GLOBAL_PT 			4
 #define METADATA_START 			0x00400000
-#define VIRTUAL_HEAP_START 		0x01000000
+#define VHEAP_START	 			0x01000000
 #define DEV_MEM_START 			0x90000000
+
+#define MAXHSIZE				(MAX_BS_ENTIRES*(MAX_PAGES_PER_BS) + NFRAMES)
 
 #define PF_INTERRUPT_NUM		14
 extern int32	currpolicy;

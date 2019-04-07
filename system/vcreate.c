@@ -2,8 +2,9 @@
 
 #include <xinu.h>
 
-local	int newpid();
-
+local	int 	newpid();
+local 	void 	vmeminit(struct procent* prptr, uint32 hsize);
+local 	status 	bs_init(struct procent* prptr, uint32 hsize);
 #define	roundew(x)	( (x+3)& ~0x3)
 
 /*----------------------------------------------------------------------------
@@ -22,12 +23,13 @@ pid32	vcreate(
 	)
 {
 	uint32		savsp, *pushsp;
-	intmask 	mask;    	/* Interrupt mask		*/
-	pid32		pid;		/* Stores new process id	*/
-	struct	procent	*prptr;		/* Pointer to proc. table entry */
+	intmask 	mask;    			/* Interrupt mask		*/
+	pid32		pid;				/* Stores new process id	*/
+	struct		procent	*prptr;		/* Pointer to proc. table entry */
 	int32		i;
-	uint32		*a;		/* Points to list of args	*/
-	uint32		*saddr;		/* Stack address		*/
+	uint32		*a;					/* Points to list of args	*/
+	uint32		*saddr;				/* Stack address		*/
+	status 		s;
 
 	mask = disable();
 	if (ssize < MINSTK)
@@ -39,14 +41,30 @@ pid32	vcreate(
 		restore(mask);
 		return SYSERR;
 	}
-
-  // Lab3 TODO. set up page directory, allocate bs etc.
+	// Error check on hsize
+	if(hsize > MAXHSIZE){
+		hsize = MAXHSIZE;
+	}
 
 	prcount++;
 	prptr = &proctab[pid];
-
-	/* Setup a flat memory model */
+	
+	// Initialize page directory
 	init_pd(pid);
+
+	// Initialize heap memory
+	vmeminit(prptr, hsize);
+
+	// Initialize all backing stores
+	s = bs_init(prptr, hsize);
+	if(s == SYSERR){
+		//release stack, dec num processes, restore mask, return...
+	}
+	panic("dont forget!");
+
+	/* Lab 3: Initialize process table vmem entries */
+	prptr->hsize = hsize;
+	prptr->vh	 = VHEAP;
 
 	/* Initialize process table entry for new process */
 	prptr->prstate = PR_SUSP;	/* Initial state is suspended	*/
@@ -106,6 +124,21 @@ pid32	vcreate(
 	
 	restore(mask);
 	return pid;
+}
+
+local void vmeminit(struct procent* prptr, uint32 hsize){
+	struct memblk *memptr;
+	memptr = &prptr->vmemlist;
+
+	/* Initialize the memory counter and head of free list */
+	memptr->mlength = NBPG*hsize;
+	memptr->mnext   =(struct memblk*)VHEAP_START;
+
+
+	/* All vheap memory is free initially, one large block */
+	memptr = memptr->mnext;
+	memptr->mnext = NULL;
+	memptr->mlength = NBPG*hsize;
 }
 
 /*------------------------------------------------------------------------

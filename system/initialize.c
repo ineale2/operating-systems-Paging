@@ -152,10 +152,12 @@ static	void	sysinit()
 
 	for (i = 0; i < NPROC; i++) {
 		prptr = &proctab[i];
-		prptr->prstate = PR_FREE;
-		prptr->prname[0] = NULLCH;
-		prptr->prstkbase = NULL;
-		prptr->prprio = 0;
+		prptr->prstate 		= PR_FREE;
+		prptr->prname[0] 	= NULLCH;
+		prptr->prstkbase 	= NULL;
+		prptr->prprio 		= 0;
+		prptr->vh			= NO_VHEAP;		
+		prptr->hsize		= 0;
 	}
 
 	/* Initialize the Null process entry */

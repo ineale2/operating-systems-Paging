@@ -1,6 +1,6 @@
 #include <xinu.h>
 
-
+//TODO: Remove panic from after bs_init in vcreate
 //TODO: When a process is deleted, return pages that it owns. 
 //TODO: Remove vaddr2paddr calls
 //TODO: Think about interrupts disabling and enabling
