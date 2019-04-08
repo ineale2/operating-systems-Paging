@@ -5,6 +5,7 @@
 #include <paging.h>
 #include <ipt.h>
 #include <process.h>
+#include <bs.h>
 #include <queue.h>
 #include <resched.h>
 #include <mark.h>

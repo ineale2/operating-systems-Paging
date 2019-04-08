@@ -31,10 +31,13 @@ syscall	kill(
 		close(prptr->prdesc[i]);
 	}
 
-  // Lab3 TODO. Free frames as a process gets killed.
 
 	freestk(prptr->prstkbase, prptr->prstklen);
+	/* Mark any pages this process is using as free */
 	freeProcFrames(pid);
+
+	/* Free any backing stores for this process */
+	freeProcBS(prptr);
 
 	switch (prptr->prstate) {
 	case PR_CURR:

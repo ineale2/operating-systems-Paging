@@ -4,7 +4,6 @@
 
 local	int 	newpid();
 local 	void 	vmeminit(struct procent* prptr, uint32 hsize);
-local 	status 	bs_init(struct procent* prptr, uint32 hsize);
 #define	roundew(x)	( (x+3)& ~0x3)
 
 /*----------------------------------------------------------------------------
@@ -58,9 +57,11 @@ pid32	vcreate(
 	// Initialize all backing stores
 	s = bs_init(prptr, hsize);
 	if(s == SYSERR){
-		//release stack, dec num processes, restore mask, return...
+		freestk(saddr, ssize);		
+		prcount--;
+		restore(mask);
+		return SYSERR;
 	}
-	panic("dont forget!");
 
 	/* Lab 3: Initialize process table vmem entries */
 	prptr->hsize = hsize;

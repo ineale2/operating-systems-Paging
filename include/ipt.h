@@ -50,13 +50,12 @@ void init_frame_GCA(uint32 fr);
 void init_ipt(void);
 
 /* Frame replacement functions */
-void   evictFrame(uint32 fr, pid32 pid);
+void   evictFrame(uint32 fr);
 uint32 pickFrame(void);
 uint32 pickFrameGCA(void); 
 uint32 pickFrameFIFO(void); 
 
 /* Helper functions */
-status get_bs_info(pid32 pid, char* vaddr, bsd_t* bsd, uint32* offset);
 char*  frameNum2ptr(uint32 frameNum);
 void   incRefCount(pt_t* pt);
 void   decRefCount(pt_t* pt, pd_t* pd, uint32 pdi);

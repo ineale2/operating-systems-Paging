@@ -64,11 +64,12 @@ struct procent {		/* Entry in the process table		*/
 	bool8	prhasmsg;	/* Nonzero iff msg is valid		*/
 	int16	prdesc[NDESC];	/* Device descriptors for process	*/
 
-  /* Lab3 TODO: add more structures as required for vheap etc. */
-	pd_t	*pd; 		/* Location of page directory for this process */
-	memblk  vmemlist;   /* Head of virtual memory free list */
-	uint32	hsize; 		/* Size of vheap in number of pages */
-	bool8   vh;			/* Does this process have a virtual heap? */
+	/* Lab 3 additional fields */
+	pd_t	*pd; 					/* Location of page directory for this process */
+	struct 	memblk  vmemlist; 	    /* Head of virtual memory free list */
+	uint32	hsize; 					/* Size of vheap in number of pages */
+	bool8   vh;						/* Does this process have a virtual heap? */
+	bsd_t 	pbsd[MAX_BS_ENTIRES]; 	/* Backing store descriptors used by this process */
 	
 };
 

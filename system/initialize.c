@@ -211,8 +211,12 @@ static void initialize_paging()
 {
 	// Set default page replacement policy
 	currpolicy = FIFO;
+
+	// Init frame FIFO queue
 	flistHead = EMPTY;
 	flistTail = EMPTY;
+
+	pfc = 0;
 
 	debug("Initializing IPT\n");
 	// Initialize inverted page table

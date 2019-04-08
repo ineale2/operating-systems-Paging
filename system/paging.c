@@ -1,11 +1,8 @@
 #include <xinu.h>
 
-//TODO: Remove panic from after bs_init in vcreate
-//TODO: When a process is deleted, return pages that it owns. 
 //TODO: Remove vaddr2paddr calls
 //TODO: Think about interrupts disabling and enabling
 //TODO: For pf_handler with new page table, do you also get frame for data?
-//TODO: write newPageTable
 
 // Page fault handler. Called by pf_dispatcher (declared in pg.S)
 void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
@@ -21,6 +18,10 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 	debug("In pf_handler\n");
 	debug("Error Code: %d\n", pfErrCode);	
 	debug("CR2: 0x%x\n", readCR2());
+	// Increment page fault counter for instrumentation
+	pfc++;
+	debug("pfc: %d\n", pfc);
+
 	//Get the faulted address
 	a = (char*)readCR2();
 	pd = proctab[currpid].pd;
@@ -268,6 +269,10 @@ uint32 vaddr2pti(char* vaddr){
 pt_t* pdi2pt(pd_t* pd, uint32 pdi){
 	return (pt_t*)(pd[pdi].pd_base << 12);
 }
+
+uint32 vaddr2vpn(char* vaddr){
+	return (uint32)(vaddr >> 12);
+}
 uint32 pde2pdi(pd_t* pd){
 	return (pd->pd_base & 0xFFC00) >> 10;
 }
@@ -311,7 +316,10 @@ void dumpmem(void){
 	kprintf("dump finished\n");
 }
 
-int  isInvalidAddr(char* a, pid32 pid){
-	panic("Invalid address not written\n");
-	return 1;
+int isInvalidAddr(char* a, pid32 pid){
+	struct procent* prptr = &proctab[pid];
+	if( ( a < ((char*)VHEAP_START + NBPG*prptr->hsize) ) || (a >= DEV_MEM_START && a < DEV_MEM_END))
+		return 0;
+	else
+		return 1; 
 }

@@ -52,6 +52,7 @@ typedef struct {
 
 #define NBPG		4096	/* number of bytes per page	*/
 #define FRAME0		1024	/* zero-th frame		*/
+#define VPN0		4096    /* First page in VHEAP  */
 
 #ifndef NFRAMES
 #define NFRAMES		3072	/* number of frames		*/
@@ -71,12 +72,16 @@ typedef struct {
 #define METADATA_START 			0x00400000
 #define VHEAP_START	 			0x01000000
 #define DEV_MEM_START 			0x90000000
+#define DEV_MEM_END				0x903FFFFF
 
-#define MAXHSIZE				(MAX_BS_ENTIRES*(MAX_PAGES_PER_BS) + NFRAMES)
+#define MAXHSIZE				(MAX_BS_ENTRIES*(MAX_PAGES_PER_BS) + NFRAMES)
 
 #define PF_INTERRUPT_NUM		14
 extern int32	currpolicy;
 extern int32	pfErrCode;
+
+/* Number of times page fault handler has been called */
+uint32 pfc;
 
 /* 4 global page tables */
 char* gpt[NUM_GLOBAL_PT];

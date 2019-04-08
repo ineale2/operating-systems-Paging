@@ -37,6 +37,10 @@ void freeFrameFIFO(uint32 fr){
 }
 
 void freeProcFrames(pid32 pid){
+	/* If the process is not using virtual memory, then it has not frames to free */
+	if(proctab[pid].vh == NO_VHEAP){
+		return;
+	}
 	int i;
 	// Free all of frames belonging to the process pid
 	for(i = 0; i< NFRAMES; i++){
@@ -75,7 +79,7 @@ char* getNewFrame(uint32 type, pid32 pid, uint32 vpn){
 	fr = pickFrame(); 
 
 	// Evict the frame
-	evictFrame(fr, pid);
+	evictFrame(fr);
 
 	// Initialize the new frame
 	init_frame(fr, type, pid, vpn);
@@ -83,11 +87,6 @@ char* getNewFrame(uint32 type, pid32 pid, uint32 vpn){
 	// Return a pointer to the new frame
 	return frameNum2ptr(fr);
 }
-
-//This function looks up a backingstore number and offset for a given pid and vaddr. The return values are PBR
-status get_bs_info(pid32 pid, char* vaddr, bsd_t* bsd, uint32* offset){
-	return SYSERR;
-}  
 
 //Clears previous information about the frame
 void init_frame(uint32 fr, uint32 type, pid32 pid, uint32 vpn){
@@ -127,7 +126,7 @@ void init_frame_GCA(uint32 fr){
 
 
 
-void evictFrame(uint32 fr, pid32 pid){
+void evictFrame(uint32 fr){
 	uint32 	vp;			/* Virtual page number of pg to be replaced */	
 	pd_t*  	pd;			/* Page directory of current process 		*/
 	pt_t*	pt;			/* Page table containing the replaced pg	*/
@@ -138,9 +137,11 @@ void evictFrame(uint32 fr, pid32 pid){
 	uint32  offset;		/* Offset into backing store 			    */
 	status  s;			/* Status used for error checking 		    */
 	char*   faddr;		/* Frame address 							*/
+	pid32 	pid;		/* PID of process whose frame is evicted 	*/
 
-	vp = ipt[fr].vpn;
-	pd = proctab[pid].pd;
+	vp  = ipt[fr].vpn;
+	pid = ipt[fr].pid;
+	pd  = proctab[pid].pd;
 
 	// Get address from vp
 	a = (char*)(vp*NBPG);
@@ -164,8 +165,8 @@ void evictFrame(uint32 fr, pid32 pid){
 		faddr = frameNum2ptr(fr);	
 		s = get_bs_info(pid, a, &bsd, &offset);
 		if(s == SYSERR){
-			kprintf("Dirty page not found in backing store, killing process %d\n", pid);
-			kill(pid);
+			kprintf("Dirty page not found in backing store, killing process %d\n", currpid);
+			kill(currpid);
 		}
 		// Store changes in backing store
 		s = write_bs(faddr, bsd, offset);
