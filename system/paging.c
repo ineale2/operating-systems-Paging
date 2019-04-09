@@ -3,17 +3,20 @@
 //TODO: Remove vaddr2paddr calls
 //TODO: Think about interrupts disabling and enabling
 //TODO: For pf_handler with new page table, do you also get frame for data?
+//TODO: For kill, need to write all frames to disk
 
 // Page fault handler. Called by pf_dispatcher (declared in pg.S)
 void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 	uint32 	pti, pdi;		// Indexes into PT and PD
 	char* 	a;				// Faulted virtual address
+	uint32  vpn;			// Virtual page number of faulted address
 	pd_t* 	pd;				// Page directory of current process
 	pt_t* 	pt;				// Page table for faulted address
 	bsd_t 	bsd;			// Backing store descriptor for not-present page
 	uint32 	offset;			// Backing store offset for not-present page
 	syscall e;				// For error checking
 	char*	faddr;			// Physical address of new frame
+	uint32  fr;				// Frame number used for replacement
 
 	debug("In pf_handler\n");
 	debug("Error Code: %d\n", pfErrCode);	
@@ -36,6 +39,7 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 	//Convert to pti and pdi
 	pti = vaddr2pti(a);
 	pdi = vaddr2pdi(a);
+	vpn = vaddr2vpn(a);
 	pt  = pdi2pt(pd, pdi);
 
 	// Need to handle two cases:
@@ -45,18 +49,30 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 	// Case 1: Check if page table is not present
 	if(pd[pdi].pd_pres == 0){
 		//Allocate a new page table at set the page directory entry
-		set_PDE_addr(&pd[pdi], (char*)newPageTable(currpid)); 
-		//TODO: Allocate another frame for data? 
-		return;
+		pt = newPageTable(currpid);
+
+		//Point the page directory to the new page table
+		set_PDE_addr(&pd[pdi], (char*)pt); 
+
+		// Allocate a new frame for the missing page
+		faddr = getNewFrame(PAGE, currpid, vpn); 
+		fr = faddr2frameNum(faddr);
+
+		// Set the page table to point to new frame
+		set_PTE_addr(&pt[pti], faddr);
 	}
 	else if(pd[pdi].pd_pres && !pt[pti].pt_pres){
 		// Case 2: Virtual page is in the backing store
 		// Using the backing store map, find the store s and page offset o which correspond to pti
 		get_bs_info(currpid, a, &bsd, &offset);
+
 		// Increment reference count of the frame that holds pt
 		incRefCount(pt);
+
 		// Obtain a free frame
-		faddr = getNewFrame(PAGE, currpid, pti);		
+		faddr = getNewFrame(PAGE, currpid, vpn);		
+		fr = faddr2frameNum(faddr);
+
 		// Copy the page in the backing store to the new frame
 		e = read_bs(faddr, bsd, offset);
 		if(e == SYSERR){
@@ -69,8 +85,8 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 	else{
 		panic("Bad news bears\n");
 	} 
+	hook_pfault(currpid, a, vpn, fr); 
 }
-
 
 void init_gpt(){
 	// Initialize global page tables (pages 0 to 4095)
@@ -117,7 +133,8 @@ void setup_id_paging(pt_t* pt, char* firstFrame){
 }
 
 pt_t* newPageTable(pid32 pid){
-	pt_t* pt = (pt_t*)getNewFrame(PTAB, pid, NO_VPN);
+	char* faddr = getNewFrame(PTAB, pid, NO_VPN);
+	pt_t* pt = (pt_t*)faddr;
 	int i;
 	for( i = 0; i< PAGETABSIZE; i++){
 		pt[i].pt_pres 		= 0;
@@ -131,6 +148,7 @@ pt_t* newPageTable(pid32 pid){
 		pt[i].pt_global		= 0;
 		pt[i].pt_avail		= 0;
 	}
+	hook_ptable_create(faddr2frameNum(faddr));
 	return pt;
 }
 
@@ -271,7 +289,7 @@ pt_t* pdi2pt(pd_t* pd, uint32 pdi){
 }
 
 uint32 vaddr2vpn(char* vaddr){
-	return (uint32)(vaddr >> 12);
+	return ((uint32)vaddr) >> 12;
 }
 uint32 pde2pdi(pd_t* pd){
 	return (pd->pd_base & 0xFFC00) >> 10;
@@ -318,7 +336,7 @@ void dumpmem(void){
 
 int isInvalidAddr(char* a, pid32 pid){
 	struct procent* prptr = &proctab[pid];
-	if( ( a < ((char*)VHEAP_START + NBPG*prptr->hsize) ) || (a >= DEV_MEM_START && a < DEV_MEM_END))
+	if( ( a < ((char*)VHEAP_START + NBPG*prptr->hsize) ) || (a >= (char*)DEV_MEM_START && a < (char*)DEV_MEM_END))
 		return 0;
 	else
 		return 1; 

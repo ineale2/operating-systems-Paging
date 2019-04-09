@@ -4,6 +4,7 @@
 #include <conf.h>
 #include <paging.h>
 #include <ipt.h>
+#include <page_server.h>
 #include <process.h>
 #include <bs.h>
 #include <queue.h>
@@ -43,8 +44,7 @@
 #include <multiboot.h>
 #include <stdio.h>
 #include <string.h>
-#include <page_server.h>
 #include <lab3.h>
 #include <qrdisk.h>
 #include <qdebug.h>
-
+#include <bs.h>

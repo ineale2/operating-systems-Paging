@@ -216,7 +216,9 @@ static void initialize_paging()
 	flistHead = EMPTY;
 	flistTail = EMPTY;
 
+	// Initialize counters
 	pfc = 0;
+	free_bs_count = MAX_BS_ENTRIES;;
 
 	debug("Initializing IPT\n");
 	// Initialize inverted page table

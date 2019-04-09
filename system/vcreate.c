@@ -29,6 +29,7 @@ pid32	vcreate(
 	uint32		*a;					/* Points to list of args	*/
 	uint32		*saddr;				/* Stack address		*/
 	status 		s;
+	uint32		bsReq;
 
 	mask = disable();
 	if (ssize < MINSTK)
@@ -40,11 +41,18 @@ pid32	vcreate(
 		restore(mask);
 		return SYSERR;
 	}
-	// Error check on hsize
-	if(hsize > MAXHSIZE){
-		hsize = MAXHSIZE;
+	// Check if there is enough backing store mappings avaliable
+	if(hsize == 0){
+		bsReq = 0;
 	}
-
+	else{
+		bsReq = 1 + (hsize - 1)/MAX_PAGES_PER_BS;	
+	}
+	if(bsReq > free_bs_count){
+		freestk(saddr, ssize);
+		restore(mask);
+		return SYSERR;
+	}
 	prcount++;
 	prptr = &proctab[pid];
 	

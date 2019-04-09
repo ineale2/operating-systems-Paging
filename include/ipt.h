@@ -57,6 +57,7 @@ uint32 pickFrameFIFO(void);
 
 /* Helper functions */
 char*  frameNum2ptr(uint32 frameNum);
+uint32 faddr2frameNum(char* faddr);
 void   incRefCount(pt_t* pt);
 void   decRefCount(pt_t* pt, pd_t* pd, uint32 pdi);
 void   clearFrame(uint32 fr);

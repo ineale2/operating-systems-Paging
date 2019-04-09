@@ -69,7 +69,7 @@ struct procent {		/* Entry in the process table		*/
 	struct 	memblk  vmemlist; 	    /* Head of virtual memory free list */
 	uint32	hsize; 					/* Size of vheap in number of pages */
 	bool8   vh;						/* Does this process have a virtual heap? */
-	bsd_t 	pbsd[MAX_BS_ENTIRES]; 	/* Backing store descriptors used by this process */
+	bsd_t 	pbsd[MAX_BS_ENTRIES]; 	/* Backing store descriptors used by this process */
 	
 };
 

@@ -174,16 +174,18 @@ void evictFrame(uint32 fr){
 			panic("write_bs failed\n");
 		}
 	}
+	hook_pswap_out(pid, vp, fr);
 }
 
 void decRefCount(pt_t* pt, pd_t* pd, uint32 pdi){
-	uint32 fr = ((char*)(pt)-(char*)METADATA_START)/NBPG;
+	uint32 fr = faddr2frameNum( (char*)pt );
 	ipt[fr].refCount--;
 	/* If the reference count for this page table reaches zero, none of its pages are in memory 	*/
 	/* In this case, the page table itself should be removed from memory and PDIR set accordingly 	*/
 	if(ipt[fr].refCount <= 0){
 		freeFrame(fr);
 		pd[pdi].pd_pres = 0;
+		hook_ptable_delete(fr);
 	}
 
 }
@@ -234,9 +236,13 @@ void clearFrame(uint32 fr){
 char* frameNum2ptr(uint32 frameNum){
 	if(frameNum >= NFRAMES || frameNum < 0)
 		kprintf("Bad frame num: %d\n", frameNum);
-	char* temp = (char*)0x00400000 + frameNum*NBPG;
+	char* temp = (char*)METADATA_START + frameNum*NBPG;
 	debug("fr %d = 0x%x\n", frameNum, (void*)temp);
 	return temp;
+}
+
+uint32 faddr2frameNum(char* faddr){
+	return (faddr - (char*)METADATA_START)/NBPG;
 }
 
 uint32 pickFrameGCA(void){ 

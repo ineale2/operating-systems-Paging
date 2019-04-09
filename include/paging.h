@@ -83,6 +83,9 @@ extern int32	pfErrCode;
 /* Number of times page fault handler has been called */
 uint32 pfc;
 
+/* Number of backing store mappings still avaliable */
+uint32 free_bs_count;
+
 /* 4 global page tables */
 char* gpt[NUM_GLOBAL_PT];
 /* Global device page table */
@@ -116,6 +119,7 @@ extern uint32 readCR0(void);
 uint32 vaddr2pdi(char* vaddr);
 uint32 vaddr2pti(char* vaddr);
 uint32 vaddr2offset(char* vaddr);
+uint32 vaddr2vpn(char* vaddr);
 pt_t*  pdi2pt(pd_t* pd, uint32 pdi);
 uint32 pde2pdi(pd_t* pd);
 uint32 pte2pti(pt_t* pt);
