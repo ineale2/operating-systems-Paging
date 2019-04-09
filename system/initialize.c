@@ -220,40 +220,24 @@ static void initialize_paging()
 	pfc = 0;
 	free_bs_count = MAX_BS_ENTRIES;;
 
-	debug("Initializing IPT\n");
 	// Initialize inverted page table
 	init_ipt();	
 
-	debug("Init global page tables\n");
+	// Init global page tables
 	init_gpt();
 
-	debug("Initializing pdir for null proc\n");
 	// Initialize pd for null process
 	init_pd(NULLPROC);
 
-	debug("Installing pf isr\n");
 	// Install the page fault interrupt service routine
 	set_evec(PF_INTERRUPT_NUM, (uint32)pf_dispatcher);
 
-	debug("load page dir for null proc\n");
-	// Load page directory for null process
-	debug("before loadPD: cr3 = 0x%x\n", readCR3());
+	// Load null process page dir
 	loadPD(proctab[NULLPROC].pd);
-	debug("after loadPD: cr3 = 0x%x\n", readCR3());
-	debug("addr of pd = 0x%x\n", proctab[NULLPROC].pd);
 
-	//dumpmem();
-
-	debug("before enPg: cr0 = %u\n", readCR0());
-	dump32(readCR0());
-	debug("Calling walkPDIR()\n");
-	walkPDIR();
-	debug("Finished walkPDIR()\n");
-
-	debug("Enabling paging...\n");
 	// Enable paging
 	enablePaging();
-	debug("After enabling paging...\n");
+
 	return;
 }
 

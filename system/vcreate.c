@@ -51,8 +51,10 @@ pid32	vcreate(
 	if(bsReq > free_bs_count){
 		freestk(saddr, ssize);
 		restore(mask);
+		debug("vcreate: not enough backing store mappings\n");
 		return SYSERR;
 	}
+	debug("vcreate: pid = %d, hsize = %d\n", pid, hsize);
 	prcount++;
 	prptr = &proctab[pid];
 	

@@ -18,12 +18,11 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 	char*	faddr;			// Physical address of new frame
 	uint32  fr;				// Frame number used for replacement
 
-	debug("In pf_handler\n");
-	debug("Error Code: %d\n", pfErrCode);	
-	debug("CR2: 0x%x\n", readCR2());
-	// Increment page fault counter for instrumentation
 	pfc++;
-	debug("pfc: %d\n", pfc);
+	debug("================= PAGE FAULT HANDLER =====================\n");
+	debug("PFC: %04d CR2: 0x%x\n", pfc, readCR2());
+	debug("Error Code: %d\n", pfErrCode);	
+	// Increment page fault counter for instrumentation
 
 	//Get the faulted address
 	a = (char*)readCR2();
@@ -32,8 +31,8 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 	//If the address is invalid, kill the process
 	if(isInvalidAddr(a, currpid)){
 		kprintf("Address 0x%x invalid for pid = %d\n", a, currpid);
-		//TODO: Enable interrupts here?
 		kill(currpid);
+		return; //Will never execute
 	}
 
 	//Convert to pti and pdi
@@ -86,6 +85,7 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 		panic("Bad news bears\n");
 	} 
 	hook_pfault(currpid, a, vpn, fr); 
+	debug("==========================================================\n\n\n");
 }
 
 void init_gpt(){
@@ -107,7 +107,6 @@ void setup_id_paging(pt_t* pt, char* firstFrame){
 	int i;
 	//Only look at base address... get rid of lower bits. 
 	char* frameAddr = (char*)((uint32) firstFrame & 0xfffff000);
-	//uint32* temp;
 	for(i = 0; i< PAGETABSIZE; i++){
 		pt[i].pt_pres 	= 1;
 		pt[i].pt_write 	= 1;
@@ -121,11 +120,7 @@ void setup_id_paging(pt_t* pt, char* firstFrame){
 		pt[i].pt_avail 	= 0;
 	
 		set_PTE_addr(&pt[i], frameAddr);
-		//kprintf("After  Addr: 0x%x :: Data: 0x%x\n", temp, *temp);
-		//debug("idpg: pte = %d frameAddr = 0x%x, pt[i].pt_base = 0x%x\n", i, frameAddr, pt[i].pt_base);
-		//debug("pt[%d].pt_base = %d\n", i, pt[i].pt_base);
-		
-		//kprintf("==============\n\n");
+
 		//Go to next frame
 		frameAddr += NBPG;
 	}
@@ -336,8 +331,8 @@ void dumpmem(void){
 
 int isInvalidAddr(char* a, pid32 pid){
 	struct procent* prptr = &proctab[pid];
-	if( ( a < ((char*)VHEAP_START + NBPG*prptr->hsize) ) || (a >= (char*)DEV_MEM_START && a < (char*)DEV_MEM_END))
-		return 0;
-	else
-		return 1; 
+	char* vheapEnd = (char*)VHEAP_START + NBPG*prptr->hsize;
+	debug("isInvalidAddr: addr = 0x%x, vheapEnd = 0x%x, hsize = %d\n", a, vheapEnd, prptr->hsize);
+	return a >= vheapEnd;
+	//|| (a >= (char*)DEV_MEM_START && a < (char*)DEV_MEM_END)
 }

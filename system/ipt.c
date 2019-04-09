@@ -1,6 +1,5 @@
 #include <xinu.h>
 
-//TODO: Think of other scenarios when frame has to change
 //TODO: Remove all panic() statements that are not necessary
 //TODO: Retry networking instructions
 
