@@ -48,6 +48,7 @@ pid32	create(
 	
 	prptr->vh 		= NO_VHEAP;
 	prptr->hsize 	= 0;
+	prptr->vmeminit = 0;
 
 	/* Initialize process table entry for new process */
 	prptr->prstate = PR_SUSP;	/* Initial state is suspended	*/

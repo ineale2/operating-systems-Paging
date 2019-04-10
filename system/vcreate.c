@@ -3,7 +3,6 @@
 #include <xinu.h>
 
 local	int 	newpid();
-local 	void 	vmeminit(struct procent* prptr, uint32 hsize);
 #define	roundew(x)	( (x+3)& ~0x3)
 
 /*----------------------------------------------------------------------------
@@ -62,7 +61,7 @@ pid32	vcreate(
 	init_pd(pid);
 
 	// Initialize heap memory
-	vmeminit(prptr, hsize);
+//	vmeminit(prptr, hsize);
 
 	// Initialize all backing stores
 	s = bs_init(prptr, hsize);
@@ -76,6 +75,7 @@ pid32	vcreate(
 	/* Lab 3: Initialize process table vmem entries */
 	prptr->hsize = hsize;
 	prptr->vh	 = VHEAP;
+	prptr->vmeminit = 0;
 
 	/* Initialize process table entry for new process */
 	prptr->prstate = PR_SUSP;	/* Initial state is suspended	*/
@@ -137,20 +137,6 @@ pid32	vcreate(
 	return pid;
 }
 
-local void vmeminit(struct procent* prptr, uint32 hsize){
-	struct memblk *memptr;
-	memptr = &prptr->vmemlist;
-
-	/* Initialize the memory counter and head of free list */
-	memptr->mlength = NBPG*hsize;
-	memptr->mnext   =(struct memblk*)VHEAP_START;
-
-
-	/* All vheap memory is free initially, one large block */
-	memptr = memptr->mnext;
-	memptr->mnext = NULL;
-	memptr->mlength = NBPG*hsize;
-}
 
 /*------------------------------------------------------------------------
  *  newpid  -  Obtain a new (free) process ID

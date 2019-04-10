@@ -2,6 +2,8 @@
 
 #include <xinu.h>
 
+static void vmeminit(struct procent* prptr);
+
 char  	*vgetmem(
 	  uint32	nbytes		/* Size of memory requested	*/
 	)
@@ -21,6 +23,9 @@ char  	*vgetmem(
 	if( prptr->vh != VHEAP){
 		restore(mask);
 		return (char *)SYSERR;
+	}
+	if( prptr->vmeminit == 0){
+		vmeminit(prptr);
 	}
 	vmemlist = &(prptr->vmemlist);
 
@@ -52,4 +57,21 @@ char  	*vgetmem(
 	restore(mask);
 
 	return (char *)SYSERR;
+}
+
+static void vmeminit(struct procent* prptr){
+	struct memblk *memptr;
+	memptr = &prptr->vmemlist;
+
+	/* Initialize the memory counter and head of free list */
+	memptr->mlength = NBPG*prptr->hsize;
+	memptr->mnext   =(struct memblk*)VHEAP_START;
+
+
+	/* All vheap memory is free initially, one large block */
+	memptr = memptr->mnext;
+	memptr->mnext = NULL;
+	memptr->mlength = NBPG*prptr->hsize;
+
+	prptr->vmeminit = 1;
 }
