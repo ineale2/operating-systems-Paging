@@ -8,18 +8,19 @@
 	.globl	invalPage
 
 pf_dispatcher:
-	cli		
+	//cli		
 	//pushl %eax
 	//movl 8(%esp), %eax
 	//movl %eax, pfErrCode 
+	popl pfErrCode
+	pushfl
 	pushal	
-	//pushfl
 	call pf_handler
-	//popfl
 	popal
+	popfl
 	//popl %eax
-	addl $4, %esp	/* Need to remove error code from stack */
-	sti
+	//addl $4, %esp	/* Need to remove error code from stack */
+	//sti
 	iret
 
 invalPage:

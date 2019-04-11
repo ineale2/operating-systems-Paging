@@ -66,14 +66,13 @@ char* getNewFrame(uint32 type, pid32 pid, uint32 vpn){
 			fr = nextframe++;
 			// Mark the frame as used
 			init_frame(fr, type, pid, vpn);
-			debug("getNewFrame: fr = %d\n", fr);
+			debug("getNewFrame: no eviction, free frame fr = %d\n", fr);
 			return frameNum2ptr(fr);
 		}
 		else{
 			nextframe++;
 		}
 	}
-	panic("getNewFrame: free frame not found! Bad\n");
 	// No frames are free, select a frame to evict
 	fr = pickFrame(); 
 
@@ -150,11 +149,10 @@ void evictFrame(uint32 fr){
 
 	// Mark the page as not present
 	pt[pti].pt_pres = 0;
-	kprintf("Evict Frame! frame belongs to pid = %d, fr = %d", pid, fr);
-	panic("Evict frame called! bad!\n");
+	debug("Evicting frame fr = %d, which belongs to process %d and stores vpn = %d\n", fr, pid, vp);
 
-	// If this page is stored in the TLB, invalidate it
-	if(ipt[fr].pid == pid){
+	// If this page belongs to the current process, then it is in the TLB and needs to be invalidated
+	if(currpid == pid){
 		invalPage(a);
 	}
 
@@ -163,7 +161,9 @@ void evictFrame(uint32 fr){
 
 	// Write page out to disk if necessary
 	if(pt[pti].pt_dirty == 1){
+		debug("evictFrame: writing dirty page\n");
 		faddr = frameNum2ptr(fr);	
+		debug("bs_info for WRITE\n");
 		s = get_bs_info(pid, a, &bsd, &offset);
 		if(s == SYSERR){
 			kprintf("Dirty page not found in backing store, killing process %d\n", currpid);
@@ -184,6 +184,7 @@ void decRefCount(pt_t* pt, pd_t* pd, uint32 pdi){
 	/* If the reference count for this page table reaches zero, none of its pages are in memory 	*/
 	/* In this case, the page table itself should be removed from memory and PDIR set accordingly 	*/
 	if(ipt[fr].refCount <= 0){
+		debug("decRefCount: deleting page table PDI = %d from pd at 0x%08x, pt in fr = %d\n", pdi, pd, fr);
 		freeFrame(fr);
 		pd[pdi].pd_pres = 0;
 		hook_ptable_delete(fr);
@@ -213,6 +214,7 @@ uint32 pickFrameFIFO(void){
 		flistTail = ipt[fr].prevFrame;
 		ipt[flistTail].nextFrame = EMPTY;
 	}
+	debug("pickFrameFIFO: picked fr = %d\n", fr);
 	if(fr == EMPTY) {panic("empty frame returned!!\n");}
 	return fr;
 }
@@ -238,7 +240,7 @@ char* frameNum2ptr(uint32 frameNum){
 	if(frameNum >= NFRAMES || frameNum < 0)
 		kprintf("Bad frame num: %d\n", frameNum);
 	char* temp = (char*)METADATA_START + frameNum*NBPG;
-	debug("fr %d = 0x%x\n", frameNum, (void*)temp);
+	debug("frameNum2ptr: fr %d = 0x%x\n", frameNum, (void*)temp);
 	return temp;
 }
 

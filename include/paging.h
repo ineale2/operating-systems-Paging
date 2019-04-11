@@ -132,5 +132,7 @@ char* vaddr2paddr(char* vaddr);
 void dumpframe(uint32 fr);
 void printPDE(pd_t* pd, uint32 pdi);
 void printPTE(pt_t* pt, uint32 pti);
-
+void printErrCode(uint32 e);
+void printPT(pt_t* pt);
+void printPD(pd_t* pd);
 #endif // __PAGING_H_

@@ -18,7 +18,7 @@ status get_bs_info(pid32 pid, char* vaddr, bsd_t* bsd, uint32* offset){
 	
 	i = vpn_offset/MAX_PAGES_PER_BS; 
 	bs_offset = vpn_offset%MAX_PAGES_PER_BS;
-
+	debug("get_bs_info: vaddr = 0x%08x, vpn = %d, pid = %d, vpn_offset = %d, bs_offset = %d, i = %d\n", vaddr, vpn, pid, vpn_offset, bs_offset, i);
 	/* Write to pass-by-reference arguments */
 	*bsd = prptr->pbsd[i];
 	*offset = bs_offset;

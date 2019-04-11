@@ -6,6 +6,7 @@
 //TODO: For kill, need to write all frames to disk
 //TODO: Need to handle case where a page is evicted, so page tab is deleted, then page is needed.
 //TODO: As written, this will get new page table and then get new page (not look at backing store)
+//TODO: Add frame0 offset to hook calls
 
 // Page fault handler. Called by pf_dispatcher (declared in pg.S)
 void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
@@ -19,11 +20,13 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 	syscall e;				// For error checking
 	char*	faddr;			// Physical address of new frame
 	uint32  fr;				// Frame number used for replacement
+	intmask mask;			// Stored interrupt mask
 
+	mask = disable();
 	pfc++;
 	debug("================= PAGE FAULT HANDLER =====================\n");
 	debug("PFC: %04d CR2: 0x%x\n", pfc, readCR2());
-	debug("Error Code: %d\n", pfErrCode);	
+	printErrCode(pfErrCode);	
 	debug("PID = %d\n", currpid);
 	// Increment page fault counter for instrumentation
 
@@ -53,49 +56,38 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 		//Allocate a new page table at set the page directory entry
 		pt = newPageTable(currpid);
 
-		//Point the page directory to the new page table
+		//Point the page directory to the new page table and mark it as present
 		set_PDE_addr(&pd[pdi], (char*)pt); 
-	
-		//Mark page table as present
 		pd[pdi].pd_pres = 1;
-
-		// Allocate a new frame for the missing page
-		faddr = getNewFrame(PAGE, currpid, vpn); 
-		fr = faddr2frameNum(faddr);
-
-		// Set the page table to point to new frame
-		set_PTE_addr(&pt[pti], faddr);
-
-		//Mark page as present
-		pt[pti].pt_pres = 1;
 	}
-	else if(pd[pdi].pd_pres && !pt[pti].pt_pres){
-		// Case 2: Virtual page is in the backing store
-		// Using the backing store map, find the store s and page offset o which correspond to pti
-		get_bs_info(currpid, a, &bsd, &offset);
+	// Now, actions to handle case1 and case2 are identical
+	// Obtain a free frame
+	faddr = getNewFrame(PAGE, currpid, vpn);		
+	fr = faddr2frameNum(faddr);
 
-		// Increment reference count of the frame that holds pt
-		incRefCount(pt);
+	// Using the backing store map, find the store s and page offset o which correspond to pti
+	debug("bs_info for READ\n");
+	get_bs_info(currpid, a, &bsd, &offset);
 
-		// Obtain a free frame
-		faddr = getNewFrame(PAGE, currpid, vpn);		
-		fr = faddr2frameNum(faddr);
-
-		// Copy the page in the backing store to the new frame
-		e = read_bs(faddr, bsd, offset);
-		if(e == SYSERR){
-			panic("read_bs failed\n");
-		}
-		// Update the page table entry, point it to the frame and set bits	
-		pt[pti].pt_pres = 1;
-		set_PTE_addr(&pt[pti], faddr);
+	// Copy the page in the backing store to the new frame
+	debug("calling read_bs: bsd = %d, offset = %d\n", (uint32)bsd, offset);
+	e = read_bs(faddr, bsd, offset);
+	if(e == SYSERR){
+		panic("read_bs failed\n");
 	}
-	else{
-		panic("Bad news bears\n");
-	} 
+	// Increment reference count of the frame that holds pt
+	incRefCount(pt);
+
+	// Update the page table entry, point it to the frame and set bits	
+	pt[pti].pt_pres = 1;
+	set_PTE_addr(&pt[pti], faddr);
+
 	hook_pfault(currpid, a, vpn, fr); 
 	if(pfc == 3)	debug("vaddr = 0x%x => paddr = 0x%x\n", 0x1001000, vaddr2paddr((char*)0x1001000));
 	debug("==========================================================\n\n\n");
+
+
+	restore(mask);
 }
 
 void init_gpt(){
@@ -127,7 +119,7 @@ void setup_id_paging(pt_t* pt, char* firstFrame){
 		pt[i].pt_dirty  = 0;
 		pt[i].pt_mbz 	= 0;
 		pt[i].pt_global = 0;
-		pt[i].pt_avail 	= 0;
+		pt[i].pt_avail 	= 1;
 	
 		set_PTE_addr(&pt[i], frameAddr);
 
@@ -151,7 +143,7 @@ pt_t* newPageTable(pid32 pid){
 		pt[i].pt_dirty  	= 0;
 		pt[i].pt_mbz 		= 0;
 		pt[i].pt_global		= 0;
-		pt[i].pt_avail		= 0;
+		pt[i].pt_avail		= 1;
 	}
 	hook_ptable_create(faddr2frameNum(faddr));
 	return pt;
@@ -178,7 +170,7 @@ void init_pd(pid32 pid){
 		pd_ptr->pd_mbz   	= 0;
 		pd_ptr->pd_fmb   	= 0;
 		pd_ptr->pd_global	= 0;
-		pd_ptr->pd_avail	= 0;
+		pd_ptr->pd_avail	= 1;
 		pd_ptr->pd_base		= 0;
 	}
 	//Set global page tables
@@ -249,6 +241,7 @@ char* vaddr2paddr(char* vaddr){
 		printPDE(pd, pdi);
 		debug("pte:\n");
 		printPTE(pt, pti);
+		printPT(pt);
 		dump32((long)pt[pti].pt_base << 12);
 		debug("==================================\n\n\n");
 	}
@@ -308,28 +301,24 @@ uint32 pte2pti(pt_t* pt){
 }
 
 
-void printPD(pd_t* pd_ptr){
+void printPD(pd_t* pd){
 
 	int i;
-	pd_t* pd;
-	debug("PDE NUM :  PT Addr  :P:W\n");
-	debug("-------   ---------- - -\n"); 
+	debug("printPD: START\n");
 	for(i = 0; i< PAGEDIRSIZE; i++){
-		pd = &pd_ptr[i];
-		debug("PDE %04d: 0x%x %d %d\n", i, pd->pd_base << 12, pd->pd_pres, pd->pd_write);
+		printPDE(pd, i);
 	}
+	debug("printPD: END\n");
 
 }
 
-void printPT(pt_t* pt_ptr){
+void printPT(pt_t* pt){
 	int i;
-	pt_t* pt;
-	debug("PTE NUM :  FR Addr  :P:W\n");
-	debug("-------   ---------- - -\n"); 
+	debug("printPT: START, pt address = 0x%08x, in frame fr = %d\n", pt, faddr2frameNum( (char*)pt ));
 	for(i = 0; i< PAGETABSIZE; i++){
-		pt = &pt_ptr[i];
-		debug("PTE %04d: 0x%x %d %d\n", i, pt->pt_base << 12, pt->pt_pres, pt->pt_write);
+		printPTE(pt, i);
 	}
+	debug("printPT: END\n");
 }
 
 void dumpmem(void){
@@ -373,4 +362,22 @@ int isInvalidAddr(char* a, pid32 pid){
 	//debug("isInvalidAddr: addr = 0x%x, vheapEnd = 0x%x, hsize = %d\n", a, vheapEnd, prptr->hsize);
 	return a >= vheapEnd;
 	//|| (a >= (char*)DEV_MEM_START && a < (char*)DEV_MEM_END)
+}
+
+void printErrCode(uint32 e){
+	debug("errCode = %d", e);
+	if(e & 0x00000001) 
+		debug(", page level protection violation");
+	else
+		debug(", page not present");
+
+	if(e & 0x00000002)
+		debug(", write err");
+	else
+		debug(", read err");
+
+	if(e & 0x00000003)
+		debug(", supervisor mode\n");
+	else
+		debug(", user mode\n");
 }
