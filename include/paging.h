@@ -130,5 +130,7 @@ void dump32(unsigned long n);
 void walkPDIR(void);
 char* vaddr2paddr(char* vaddr);
 void dumpframe(uint32 fr);
+void printPDE(pd_t* pd, uint32 pdi);
+void printPTE(pt_t* pt, uint32 pti);
 
 #endif // __PAGING_H_

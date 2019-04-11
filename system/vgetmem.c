@@ -24,6 +24,7 @@ char  	*vgetmem(
 		restore(mask);
 		return (char *)SYSERR;
 	}
+	debug("vgetmem: pid = %d, nbytes = %d\n", currpid, nbytes);
 	if( prptr->vmeminit == 0){
 		vmeminit(prptr);
 	}
@@ -47,6 +48,7 @@ char  	*vgetmem(
 			leftover->mnext = curr->mnext;
 			leftover->mlength = curr->mlength - nbytes;
 			vmemlist->mlength -= nbytes;
+			debug("vgetmem: leftover->mlength: %d == 0x%x, vmemlist->mlength %d\n", leftover->mlength, leftover->mlength, vmemlist->mlength); 
 			restore(mask);
 			return (char *)(curr);
 		} else {			/* Move to next block	*/
@@ -54,6 +56,7 @@ char  	*vgetmem(
 			curr = curr->mnext;
 		}
 	}
+	dumpframe(13);
 	restore(mask);
 
 	return (char *)SYSERR;
@@ -71,8 +74,10 @@ static void vmeminit(struct procent* prptr){
 
 	/* All vheap memory is free initially, one large block */
 	memptr = memptr->mnext;
+	debug("vmeminit: before write to page\n");
 	memptr->mnext = NULL;
+	debug("vememinit: after first write to page\n");
 	memptr->mlength = NBPG*prptr->hsize;
-
+	dumpframe(12);
 	prptr->vmeminit = 1;
 }

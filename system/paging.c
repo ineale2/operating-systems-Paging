@@ -94,6 +94,7 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 		panic("Bad news bears\n");
 	} 
 	hook_pfault(currpid, a, vpn, fr); 
+	if(pfc == 3)	debug("vaddr = 0x%x => paddr = 0x%x\n", 0x1001000, vaddr2paddr((char*)0x1001000));
 	debug("==========================================================\n\n\n");
 }
 
@@ -238,13 +239,16 @@ char* vaddr2paddr(char* vaddr){
 	paddr =(char*)( (uint32)paddr | offset);
 	
 	if(vaddr != paddr){
-		debug("==================================\n");
+		debug("========= ERROR PADDR != VADDR ===\n");
 		debug("vaddr: 0x%x paddr: 0x%x\n", vaddr, paddr);
 		debug("pdi: %d, pti: %d, offset: %d\n", pdi, pti, offset);
 		debug("pt = 0x%x, pte = 0x%x\n", pt, (char*)(pt[pti].pt_base << 12));
 		debug("vaddr:\n");
 		dump32((long)vaddr);
+		debug("pde:\n");
+		printPDE(pd, pdi);
 		debug("pte:\n");
+		printPTE(pt, pti);
 		dump32((long)pt[pti].pt_base << 12);
 		debug("==================================\n\n\n");
 	}
@@ -337,17 +341,30 @@ void dumpmem(void){
 	}
 	kprintf("dump finished\n");
 }
+void printPDE(pd_t* pd, uint32 pdi){
+	pd = pd + pdi;
+	kprintf("PDE: 0x%08x, base = 0x%08x, P=%d W=%d U=%d PWT=%d PCD=%d ACC=%d MBZ=%d FMB=%d G=%d AVL=%d\n",
+		*((uint32*)(pd)), pd->pd_base << 12, pd->pd_pres, pd->pd_write, pd->pd_user, pd->pd_pwt, pd->pd_pcd,
+		pd->pd_acc, pd->pd_mbz, pd->pd_fmb, pd->pd_global, pd->pd_avail);
+}
+
+void printPTE(pt_t* pt, uint32 pti){
+	pt = pt + pti;
+	kprintf("PTE: 0x%08x, base = 0x%08x, P=%d W=%d U=%d PWT=%d PCD=%d ACC=%d D=%d MBZ=%d G=%d AVL=%d\n",
+		*((uint32*)(pt)), pt->pt_base << 12, pt->pt_pres, pt->pt_write, pt->pt_user, pt->pt_pwt, pt->pt_pcd,
+		pt->pt_acc, pt->pt_dirty, pt->pt_mbz, pt->pt_global, pt->pt_avail);
+}
 
 void dumpframe(uint32 fr){
 	kprintf("\n================== DUMPING FRAME %d ==================\n", fr);
 	kprintf("\n");
 	uint32* p = (uint32*)frameNum2ptr(fr);;
-	uint32* end = p + NBPG;
+	uint32* end =(uint32*) ((char*)p + NBPG);
 	while(p < end){
 		kprintf("0x%x:0x%x\n", p, *p);
 		p = p + 1;	
 	}
-	kprintf("======================================================\n\n");
+	kprintf("=================== END DUMP FRAME %d ================\n\n", fr);
 }
 
 int isInvalidAddr(char* a, pid32 pid){

@@ -9,15 +9,15 @@
 
 pf_dispatcher:
 	cli		
-	pushl %eax
-	movl 8(%esp), %eax
-	movl %eax, pfErrCode 
+	//pushl %eax
+	//movl 8(%esp), %eax
+	//movl %eax, pfErrCode 
 	pushal	
-	pushfl
+	//pushfl
 	call pf_handler
-	popfl
+	//popfl
 	popal
-	popl %eax
+	//popl %eax
 	addl $4, %esp	/* Need to remove error code from stack */
 	sti
 	iret

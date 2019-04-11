@@ -43,8 +43,10 @@ static void do_policy_test(void) {
 		}
       *p++ = v;
 	  if(j == 0) kprintf("ATTN Addr: 0x%x, data = 0x%x, should be 0x%x\n", (p - 1), *(p-1), v);
+	  if(j == 0) *(p-1) = v;
+	  if(j == 0) kprintf("AFTR Addr: 0x%x, data = 0x%x, should be 0x%x\n", (p - 1), *(p-1), v);
     }
-	if(i == 1) dumpframe(14);
+//	if(i == 1) dumpframe(14);
 
     sleepms(20); // to make it slower
   }

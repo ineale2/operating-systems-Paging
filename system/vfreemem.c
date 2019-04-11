@@ -13,15 +13,19 @@ syscall	vfreemem(
 	uint32	top;
 
 	mask = disable();
-	if ((nbytes == 0) || ((uint32) blkaddr < (uint32) minheap)
-			  || ((uint32) blkaddr > (uint32) maxheap)) {
+	debug("vfreemem: currpid = %d, blkaddr = 0x%08x, nbytes = %d == 0x%08x\n", currpid, blkaddr, nbytes, nbytes);
+	prptr = &proctab[currpid];
+	char* vheap_end = (char*)VHEAP_START + NBPG*prptr->hsize;
+	if ((nbytes == 0) || ((uint32) blkaddr < VHEAP_START)
+			  || (blkaddr >  vheap_end)) {
 		restore(mask);
+		debug("vfreemem: minheap = %08x, maxheap = %08x\n");
 		return SYSERR;
 	}
-	prptr = &proctab[currpid];
 	// Return if this process does not have virtual memory enabled
 	if( prptr->vh != VHEAP){
 		restore(mask);
+		debug("vfreemem: process has no virtual heap, prptr->vh = %d\n", prptr->vh);
 		return SYSERR;
 	}
 
@@ -48,6 +52,7 @@ syscall	vfreemem(
 	if (((prev != vmemlist) && (uint32) block < top)
 	    || ((next != NULL)	&& (uint32) block+nbytes>(uint32)next)) {
 		restore(mask);
+		debug("vfreeme: err, prev = 0x%08x, block = 0x%08x, top = 0x%08x\n", prev, block, top);
 		return SYSERR;
 	}
 
