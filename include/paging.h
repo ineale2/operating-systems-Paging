@@ -1,7 +1,7 @@
 /* paging.h */
 
 /* Helpful control macros for debugging and printing */
-#define XDEBUG 		1
+#define XDEBUG 		0
 
 #if XDEBUG
 #define debug(...) kprintf(__VA_ARGS__)

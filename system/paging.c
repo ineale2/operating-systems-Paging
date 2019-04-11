@@ -37,6 +37,7 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 	//If the address is invalid, kill the process
 	if(isInvalidAddr(a, currpid)){
 		kprintf("Address 0x%x invalid for pid = %d\n", a, currpid);
+		restore(mask);
 		kill(currpid);
 		return; //Will never execute
 	}
