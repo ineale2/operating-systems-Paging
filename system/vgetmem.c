@@ -56,7 +56,6 @@ char  	*vgetmem(
 			curr = curr->mnext;
 		}
 	}
-	dumpframe(13);
 	restore(mask);
 
 	return (char *)SYSERR;
@@ -78,6 +77,5 @@ static void vmeminit(struct procent* prptr){
 	memptr->mnext = NULL;
 	debug("vememinit: after first write to page\n");
 	memptr->mlength = NBPG*prptr->hsize;
-	dumpframe(12);
 	prptr->vmeminit = 1;
 }

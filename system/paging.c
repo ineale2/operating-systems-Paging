@@ -346,15 +346,15 @@ void printPTE(pt_t* pt, uint32 pti){
 }
 
 void dumpframe(uint32 fr){
-	kprintf("\n================== DUMPING FRAME %d ==================\n", fr);
-	kprintf("\n");
+	debug("\n================== DUMPING FRAME %d ==================\n", fr);
+	debug("\n");
 	uint32* p = (uint32*)frameNum2ptr(fr);;
 	uint32* end =(uint32*) ((char*)p + NBPG);
 	while(p < end){
-		kprintf("0x%x:0x%x\n", p, *p);
+		debug("0x%x:0x%x\n", p, *p);
 		p = p + 1;	
 	}
-	kprintf("=================== END DUMP FRAME %d ================\n\n", fr);
+	debug("=================== END DUMP FRAME %d ================\n\n", fr);
 }
 
 int isInvalidAddr(char* a, pid32 pid){
