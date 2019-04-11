@@ -60,6 +60,7 @@ char  	*vgetmem(
 }
 
 static void vmeminit(struct procent* prptr){
+	debug("vmeminit: pid = %d\n", currpid);
 	struct memblk *memptr;
 	memptr = &prptr->vmemlist;
 

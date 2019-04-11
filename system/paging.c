@@ -4,6 +4,8 @@
 //TODO: Think about interrupts disabling and enabling
 //TODO: For pf_handler with new page table, do you also get frame for data?
 //TODO: For kill, need to write all frames to disk
+//TODO: Need to handle case where a page is evicted, so page tab is deleted, then page is needed.
+//TODO: As written, this will get new page table and then get new page (not look at backing store)
 
 // Page fault handler. Called by pf_dispatcher (declared in pg.S)
 void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
@@ -22,6 +24,7 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 	debug("================= PAGE FAULT HANDLER =====================\n");
 	debug("PFC: %04d CR2: 0x%x\n", pfc, readCR2());
 	debug("Error Code: %d\n", pfErrCode);	
+	debug("PID = %d\n", currpid);
 	// Increment page fault counter for instrumentation
 
 	//Get the faulted address
@@ -52,6 +55,9 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 
 		//Point the page directory to the new page table
 		set_PDE_addr(&pd[pdi], (char*)pt); 
+	
+		//Mark page table as present
+		pd[pdi].pd_pres = 1;
 
 		// Allocate a new frame for the missing page
 		faddr = getNewFrame(PAGE, currpid, vpn); 
@@ -59,6 +65,9 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 
 		// Set the page table to point to new frame
 		set_PTE_addr(&pt[pti], faddr);
+
+		//Mark page as present
+		pt[pti].pt_pres = 1;
 	}
 	else if(pd[pdi].pd_pres && !pt[pti].pt_pres){
 		// Case 2: Virtual page is in the backing store
@@ -329,10 +338,22 @@ void dumpmem(void){
 	kprintf("dump finished\n");
 }
 
+void dumpframe(uint32 fr){
+	kprintf("\n================== DUMPING FRAME %d ==================\n", fr);
+	kprintf("\n");
+	uint32* p = (uint32*)frameNum2ptr(fr);;
+	uint32* end = p + NBPG;
+	while(p < end){
+		kprintf("0x%x:0x%x\n", p, *p);
+		p = p + 1;	
+	}
+	kprintf("======================================================\n\n");
+}
+
 int isInvalidAddr(char* a, pid32 pid){
 	struct procent* prptr = &proctab[pid];
 	char* vheapEnd = (char*)VHEAP_START + NBPG*prptr->hsize;
-	debug("isInvalidAddr: addr = 0x%x, vheapEnd = 0x%x, hsize = %d\n", a, vheapEnd, prptr->hsize);
+	//debug("isInvalidAddr: addr = 0x%x, vheapEnd = 0x%x, hsize = %d\n", a, vheapEnd, prptr->hsize);
 	return a >= vheapEnd;
 	//|| (a >= (char*)DEV_MEM_START && a < (char*)DEV_MEM_END)
 }

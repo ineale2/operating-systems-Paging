@@ -35,11 +35,16 @@ static void do_policy_test(void) {
   for (uint32 i = 0; i<npages; i++) {
     uint32 *p = (uint32*)(mem + (i * PAGESIZE));
 
-    // kprintf("Write Iteration [%3d] at 0x%08x\n", i, p);
+    kprintf("Write Iteration [%3d] at 0x%08x\n", i, p);
     for (uint32 j=0; j<PAGESIZE; j=j+4) {
       uint32 v = get_test_value(p);
+		if(i == 1){
+			kprintf("0x%x:0x%x\n",p,v);
+		}
       *p++ = v;
+	  if(j == 0) kprintf("ATTN Addr: 0x%x, data = 0x%x, should be 0x%x\n", (p - 1), *(p-1), v);
     }
+	if(i == 1) dumpframe(14);
 
     sleepms(20); // to make it slower
   }
@@ -48,6 +53,7 @@ static void do_policy_test(void) {
   for (uint32 i = 0; i<npages; i++) {
     uint32 *p = (uint32*)(mem + (i * PAGESIZE));
     kprintf("Check Iteration [%3d] at 0x%08x\n", i, p);
+	if(i == 1) dumpframe(14);
     for (uint32 j=0; j<PAGESIZE; j=j+4) {
       uint32 v = get_test_value(p);
       ASSERT(*p++ == v);

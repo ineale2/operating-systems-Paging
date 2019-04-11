@@ -129,5 +129,6 @@ void dumpmem(void);
 void dump32(unsigned long n);
 void walkPDIR(void);
 char* vaddr2paddr(char* vaddr);
+void dumpframe(uint32 fr);
 
 #endif // __PAGING_H_

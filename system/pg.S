@@ -13,7 +13,9 @@ pf_dispatcher:
 	movl 8(%esp), %eax
 	movl %eax, pfErrCode 
 	pushal	
+	pushfl
 	call pf_handler
+	popfl
 	popal
 	popl %eax
 	addl $4, %esp	/* Need to remove error code from stack */

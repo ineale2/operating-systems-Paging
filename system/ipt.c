@@ -73,7 +73,7 @@ char* getNewFrame(uint32 type, pid32 pid, uint32 vpn){
 			nextframe++;
 		}
 	}
-
+	panic("getNewFrame: free frame not found! Bad\n");
 	// No frames are free, select a frame to evict
 	fr = pickFrame(); 
 
@@ -150,6 +150,8 @@ void evictFrame(uint32 fr){
 
 	// Mark the page as not present
 	pt[pti].pt_pres = 0;
+	kprintf("Evict Frame! frame belongs to pid = %d, fr = %d", pid, fr);
+	panic("Evict frame called! bad!\n");
 
 	// If this page is stored in the TLB, invalidate it
 	if(ipt[fr].pid == pid){
