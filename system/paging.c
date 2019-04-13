@@ -84,7 +84,6 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 	set_PTE_addr(&pt[pti], faddr);
 
 	hook_pfault(currpid, a, vpn, fr); 
-	if(pfc == 3)	debug("vaddr = 0x%x => paddr = 0x%x\n", 0x1001000, vaddr2paddr((char*)0x1001000));
 	debug("==========================================================\n\n\n");
 
 

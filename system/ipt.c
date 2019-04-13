@@ -1,4 +1,5 @@
 #include <xinu.h>
+//TODO: Test that page tables actually get removed
 
 //TODO: Remove all panic() statements that are not necessary
 //TODO: Retry networking instructions
@@ -21,7 +22,12 @@ void freeFrameFIFO(uint32 fr){
 	prev = ipt[fr].prevFrame;
 	next = ipt[fr].nextFrame;
 	// Remove the frame from the queue
-	if(fr == flistHead){
+	if(fr == flistHead && fr == flistTail){
+		//Only element in queue
+		flistHead = EMPTY;
+		flistTail = EMPTY;
+	}
+	else if(fr == flistHead){
 		ipt[next].prevFrame = EMPTY;
 		flistHead = next;
 	}
@@ -53,7 +59,7 @@ void freeFrameGCA(uint32 fr){
 	return;
 }
 
-char* getNewFrame(uint32 type, pid32 pid, uint32 vpn){
+char* getNewFrame(uint32 type, pid32 pid, int32 vpn){
 	uint32 i;
 	static uint32 nextframe = 0;
 	uint32 fr;
@@ -87,7 +93,7 @@ char* getNewFrame(uint32 type, pid32 pid, uint32 vpn){
 }
 
 //Clears previous information about the frame
-void init_frame(uint32 fr, uint32 type, pid32 pid, uint32 vpn){
+void init_frame(uint32 fr, uint32 type, pid32 pid, int32 vpn){
 	ipt[fr].status 		= type;
 	ipt[fr].pid			= pid;
 	ipt[fr].vpn			= vpn;
@@ -119,13 +125,14 @@ void init_frame_FIFO(uint32 fr){
 }
 
 void init_frame_GCA(uint32 fr){
+	panic("PANIC: init_frame_GCA\n");
 	return;
 }
 
 
 
 void evictFrame(uint32 fr){
-	uint32 	vp;			/* Virtual page number of pg to be replaced */	
+	int32 	vp;			/* Virtual page number of pg to be replaced */	
 	pd_t*  	pd;			/* Page directory of current process 		*/
 	pt_t*	pt;			/* Page table containing the replaced pg	*/
 	char*	a;			/* First virtual address on page vp 		*/
@@ -149,7 +156,7 @@ void evictFrame(uint32 fr){
 
 	// Mark the page as not present
 	pt[pti].pt_pres = 0;
-	debug("Evicting frame fr = %d, which belongs to process %d and stores vpn = %d\n", fr, pid, vp);
+	debug("Evicting frame fr = %d, which belongs to process %d and stores vpn = %d, address = 0x%08x\n", fr, pid, vp, a);
 
 	// If this page belongs to the current process, then it is in the TLB and needs to be invalidated
 	if(currpid == pid){
@@ -172,7 +179,7 @@ void evictFrame(uint32 fr){
 		// Store changes in backing store
 		s = write_bs(faddr, bsd, offset);
 		if( s == SYSERR){
-			panic("write_bs failed\n");
+			panic("PANIC: write_bs failed\n");
 		}
 	}
 	hook_pswap_out(pid, vp, fr);
@@ -185,7 +192,6 @@ void decRefCount(pt_t* pt, pd_t* pd, uint32 pdi){
 	/* In this case, the page table itself should be removed from memory and PDIR set accordingly 	*/
 	if(ipt[fr].refCount <= 0){
 		debug("decRefCount: deleting page table PDI = %d from pd at 0x%08x, pt in fr = %d\n", pdi, pd, fr);
-		kprintf("Page table deleted\n");
 		freeFrame(fr);
 		pd[pdi].pd_pres = 0;
 		hook_ptable_delete(fr);
@@ -202,6 +208,10 @@ void  incRefCount(pt_t* pt){
 
 uint32 pickFrameFIFO(void){
 	uint32 fr;
+	if(flistHead == EMPTY){
+		kprintf("flistHead = %d, flistTail = %d\n", flistHead, flistTail);
+		panic("PANIC: pickFrameFIFO: flistHead is empty\n");
+	}
 	/* Dequeue from tail */
 	if(flistTail == flistHead){
 		//One element in queue
@@ -215,7 +225,7 @@ uint32 pickFrameFIFO(void){
 		flistTail = ipt[fr].prevFrame;
 		ipt[flistTail].nextFrame = EMPTY;
 	}
-	debug("pickFrameFIFO: picked fr = %d\n", fr);
+	debug("pickFrameFIFO: picked fr = %d, vpn = %d, status = %d (PAGE = %d)\n", fr, ipt[fr].vpn, ipt[fr].status, PAGE);
 	if(fr == EMPTY) {panic("empty frame returned!!\n");}
 	return fr;
 }
@@ -250,6 +260,7 @@ uint32 faddr2frameNum(char* faddr){
 }
 
 uint32 pickFrameGCA(void){ 
+	panic("PANIC: pickFrameGCA called\n");
 
 	return -1;
 }
@@ -263,4 +274,21 @@ uint32 pickFrame(void){
 		fr = pickFrameGCA();
 	}
 	return fr;
+}
+
+void printFrameQueue(void){
+	kprintf("==== FRAME QUEUE ====\n");
+	kprintf("HEAD = %d, TAIL = %d\n", flistHead, flistTail);
+	uint32 fr = flistHead;
+	if(flistHead == EMPTY){
+		kprintf("empty!\n");
+		kprintf("=====================\n");
+		return;
+	}
+	while(fr != flistTail){
+		kprintf("PREV = %02d FR = %02d NEXT = %02d (PID = %d)\n", ipt[fr].prevFrame, fr, ipt[fr].nextFrame, ipt[fr].pid);
+		fr = ipt[fr].nextFrame;
+	}
+		kprintf("PREV = %02d FR = %02d NEXT = %02d (PID = %d)\n", ipt[fr].prevFrame, fr, ipt[fr].nextFrame, ipt[fr].pid);
+	kprintf("=====================\n");
 }

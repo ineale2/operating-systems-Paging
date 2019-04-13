@@ -26,7 +26,7 @@ typedef struct {
 	uint32  prevFrame;		// Used when frame status is PAGE
 	int16	status;
 	pid32 	pid;
-	uint32  vpn;
+	int32  vpn;
 	uint32 	refCount; 		// When frame status is PTAB, this is the number of pages that are in memory
 } frame_t;
 
@@ -37,14 +37,14 @@ uint32 flistHead;
 uint32 flistTail;
 
 /* Frame allocation/freeing functions */
-char* getNewFrame(uint32 type, pid32 pid, uint32 vpn);
+char* getNewFrame(uint32 type, pid32 pid, int32 vpn);
 void  freeFrame(uint32 fr);
 void  freeFrameFIFO(uint32 fr);
 void  freeFrameGCA(uint32 fr);
 void  freeProcFrames(pid32 pid);
 
 /* Initialization functions */
-void init_frame(uint32 fr, uint32 type, pid32 pid, uint32 vpn);
+void init_frame(uint32 fr, uint32 type, pid32 pid, int32 vpn);
 void init_frame_FIFO(uint32 fr);
 void init_frame_GCA(uint32 fr);
 void init_ipt(void);
@@ -61,4 +61,7 @@ uint32 faddr2frameNum(char* faddr);
 void   incRefCount(pt_t* pt);
 void   decRefCount(pt_t* pt, pd_t* pd, uint32 pdi);
 void   clearFrame(uint32 fr);
+
+/* Debug functions */
+void printFrameQueue(void);
 #endif // __IPT_H_

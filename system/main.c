@@ -32,17 +32,17 @@ process	main(void)
 
   //page_policy_test();
 
-	//test1();
+	test1();
 	test2();
 	//test3();
-	//test4();
-	//test5();
+	test4();
+	test5();
   return OK;
 }
 
 //Two processes 
 void test1(void){
-	kprintf("=================== TEST 1 ================\n");
+	kprintf("\n=================== TEST 1 ================\n");
 	kprintf("Testing two processes\n");
 	ASSERT(NFRAMES < 30);
 	uint32 numPages = 50;
@@ -57,7 +57,7 @@ void test1(void){
 
 //Many vgetmem and vfreemem
 void test2(void){
-	kprintf("=================== TEST 2 ================\n");
+	kprintf("\n=================== TEST 2 ================\n");
 	kprintf("Testing many vgetmem calls\n");
 	ASSERT(NFRAMES < 30);
 	uint32 numPages = 100;
@@ -73,7 +73,7 @@ void test2(void){
 
 //Large allocation
 void test3(void){
-	kprintf("=================== TEST 3 ================\n");
+	kprintf("\n=================== TEST 3 ================\n");
 	kprintf("Testing a large allocation\n");
 	ASSERT(NFRAMES > 250 && NFRAMES < 400);
 	uint32 numPages = 8*200; //max number of pages
@@ -85,7 +85,7 @@ void test3(void){
 
 // Killed process does not mess up frame queue
 void test4(void){
-	kprintf("=================== TEST 4 ================\n");
+	kprintf("\n=================== TEST 4 ================\n");
 	kprintf("Testing that killing a process leaves queue in functional state\n");
 	ASSERT(NFRAMES < 30);
 	uint32 numPages = 50; //max number of pages
@@ -105,7 +105,7 @@ void test4(void){
 
 // After page table delete, process can find the right memory
 void test5(void){
-	kprintf("=================== TEST 5 ================\n");
+	kprintf("\n=================== TEST 5 ================\n");
 	kprintf("Testing process can find memory after page table delete\n");
 	ASSERT(NFRAMES < 30);
 	uint32 numPages = 1;
@@ -166,16 +166,17 @@ void stopper(uint32 numPages){
 	for(i = 0 ; i < numPages*NBPG ; i+=4*inc){
 		*p = 0xDEADBEEF;	
 		p+=inc;
-		if(i%NBPG == 0) kprintf("%d ", count++);
+		if(i%(10*NBPG) == 0) kprintf("%d ", count+=10);
 	}
-	kprintf("SUSPEND: pid = %d\n", currpid);
+	kprintf("\nSUSPEND: pid = %d\n", currpid);
 	suspend(currpid);
 	kprintf("RESUMED: pid = %d\n", currpid);
 
+	p = start;
 	for(i = 0 ; i < numPages*NBPG ; i+=4*inc){
 		*p = get_test_value(p);	
 		p+=inc;
-		if(i%NBPG == 0) kprintf("%d ", count++);
+		if(i%(10*NBPG) == 0) kprintf("%d ", count+=10);
 	}
 	kprintf("\nCHECKING: pid = %d\n", currpid);
 	
@@ -188,13 +189,13 @@ void stopper(uint32 numPages){
 			panic("Test fail\n");
 		}
 		p+=inc;
-		if(i%NBPG == 0) kprintf("%d ", count++);
+		if(i%(10*NBPG) == 0) kprintf("%d ", count+=10);
 	}
 	if(SYSERR == vfreemem((char*)start, numPages*NBPG)){
 		kprintf("vfreemem failed\n");
 		panic("test failed\n");
 	}
-	kprintf("proc: pid %d exit\n", currpid);
+	kprintf("\nproc: pid %d exit\n", currpid);
 }
 
 
@@ -254,7 +255,7 @@ void proc(uint32 inc, uint32 numPages){
 	for(i = 0 ; i < numPages*NBPG ; i+=4*inc){
 		*p = get_test_value(p);	
 		p+=inc;
-		if(i%NBPG == 0) kprintf("%d ", count++);
+		if(i%(10*NBPG) == 0) kprintf("%d ", count+=10);
 	}
 	kprintf("\nCHECKING: pid = %d\n", currpid);
 	
@@ -267,7 +268,7 @@ void proc(uint32 inc, uint32 numPages){
 			panic("Test fail\n");
 		}
 		p+=inc;
-		if(i%NBPG == 0) kprintf("%d ", count++);
+		if(i%(10*NBPG) == 0) kprintf("%d ", count+=10);
 	}
 	if(SYSERR == vfreemem((char*)start, numPages*NBPG)){
 		kprintf("vfreemem failed\n");
