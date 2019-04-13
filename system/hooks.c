@@ -2,7 +2,7 @@
 
 #include <xinu.h>
 
-#define HOOK_LOG_ON
+//#define HOOK_LOG_ON
 
 #define POLICY_TESTING 0
 

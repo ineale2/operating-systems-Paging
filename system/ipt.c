@@ -185,6 +185,7 @@ void decRefCount(pt_t* pt, pd_t* pd, uint32 pdi){
 	/* In this case, the page table itself should be removed from memory and PDIR set accordingly 	*/
 	if(ipt[fr].refCount <= 0){
 		debug("decRefCount: deleting page table PDI = %d from pd at 0x%08x, pt in fr = %d\n", pdi, pd, fr);
+		kprintf("Page table deleted\n");
 		freeFrame(fr);
 		pd[pdi].pd_pres = 0;
 		hook_ptable_delete(fr);
