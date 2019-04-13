@@ -38,6 +38,7 @@ pid32	vcreate(
 	    (uint32 *)SYSERR ) ||
 	    (pid=newpid()) == SYSERR || priority < 1 ) {
 		restore(mask);
+		kprintf("vcreate: pid = %d, saddr = %d\n", pid, saddr);
 		return SYSERR;
 	}
 	// Check if there is enough backing store mappings avaliable
@@ -50,7 +51,7 @@ pid32	vcreate(
 	if(bsReq > free_bs_count){
 		freestk(saddr, ssize);
 		restore(mask);
-		debug("vcreate: not enough backing store mappings\n");
+		kprintf("vcreate: not enough backing store mappings\n");
 		return SYSERR;
 	}
 	debug("vcreate: pid = %d, hsize = %d\n", pid, hsize);
@@ -58,10 +59,14 @@ pid32	vcreate(
 	prptr = &proctab[pid];
 	
 	// Initialize page directory
-	init_pd(pid);
-
-	// Initialize heap memory
-//	vmeminit(prptr, hsize);
+	s = init_pd(pid);
+	if(s == SYSERR){
+		freestk(saddr, ssize);
+		prcount--;
+		restore(mask);
+		kprintf("vcreate: init_pd failed\n");
+		return SYSERR;
+	}
 
 	// Initialize all backing stores
 	s = bs_init(prptr, hsize);

@@ -102,7 +102,7 @@ int  isInvalidAddr(char* a, pid32 pid);
 
 /* Initialization functions */
 void  setup_id_paging(pt_t* pt, char* firstFrame);
-void  init_pd(pid32 pid);
+status  init_pd(pid32 pid);
 void  init_gpt(void);
 pt_t* newPageTable(pid32);
 

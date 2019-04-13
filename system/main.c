@@ -9,6 +9,7 @@ void test2(void);
 void test3(void);
 void test4(void);
 void test5(void);
+void test6(void);
 
 extern void page_policy_test(void);
 
@@ -32,11 +33,15 @@ process	main(void)
 
   //page_policy_test();
 
-	test1();
-	test2();
+	//test1();
+	//test2();
 	//test3();
-	test4();
-	test5();
+	//test4();
+	//test5();
+	//TODO: Test_val_2, times currpid to test page invalidation
+	//TODO: Revert to older version. Does original have similar amounts of free data?
+	//TODO: Figure out why test6 cannot pass if sleep(10) is in there. rdsbufalloc panics, but doesnt always show the message
+	test6();
   return OK;
 }
 
@@ -79,7 +84,7 @@ void test3(void){
 	uint32 numPages = 8*200; //max number of pages
 	pid32 p1 = vcreate(proc, INITSTK, numPages, INITPRIO, "proc1", 2, 500, numPages);  	
   	resume(p1);
-	sleep(20);
+	sleep(45);
 	kprintf("=============== END OF TEST 3 =============\n");
 }
 
@@ -122,6 +127,58 @@ void test5(void){
 	resume(p1);
 	sleep(5);
 	kprintf("=============== END OF TEST 5 =============\n");
+
+}
+
+void test6(void){
+	kprintf("\n=================== TEST 6 ================\n");
+	kprintf("Testing error calls and edge cases\n");
+	ASSERT(NFRAMES < 30);
+	int numPages = 1;
+	pid32 pid[NFRAMES];
+	//9th vcreate should error out	
+	int i;
+	for(i = 0; i < 8; i++){
+		pid[i] = vcreate(stopper2, INITSTK/16, numPages, INITPRIO, "proc1", 1, numPages);  
+		if(pid[i] == (pid32)SYSERR)
+			kprintf("TEST FAIL, vcreate %d returned error\n", i);
+	}
+	kprintf("Err message should display...\n");
+	if( SYSERR != vcreate(stopper2, INITSTK/16, numPages, INITPRIO, "proc1", 1, numPages)){
+		kprintf("TEST FAIL, 9th vcreate succeeded\n");
+	}
+	for(i = 0; i < 8; i++){
+		if(SYSERR == kill(pid[i]))
+			kprintf("TEST FAIL, could not kill pid %d\n", pid[i]);
+	}
+	// Now run a normal process
+	numPages = 350;
+	kprintf("Creating normal process\n");
+	pid32 p1 = vcreate(proc, INITSTK, numPages, INITPRIO, "proc1", 2, 512, numPages);  	
+	resume(p1);
+	sleep(10);
+
+	kprintf("\nProcess %d should have finished by now\n", p1);
+	// Now create so many processes that there are not enough frames for PDIR
+	//kprintf("Now calling create()\n");
+	for(i = 0; i < NFRAMES; i++){
+		//kprintf("%d ", i);
+		pid[i] = create(stopper2, INITSTK/16, INITPRIO, "proc1", 1, -1); 
+		if(pid[i] == (pid32)SYSERR){
+			kprintf("\nTEST PASS: No space for PDIR\n");
+			break;
+		}
+	}
+	int j;
+	for(j = 0; j < i; j++){
+		if(SYSERR == kill(pid[j])){
+			kprintf("\nTEST FAIL, culd not kill pid %d\n", pid[j]);
+		}
+	}
+	if(i == NFRAMES) kprintf("TEST FAIL: All create() calls suceeded\n");
+
+
+	kprintf("=============== END OF TEST 6 =============\n");
 
 }
 

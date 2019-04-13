@@ -26,6 +26,7 @@ pid32	create(
 	int32		i;
 	uint32		*a;		/* Points to list of args	*/
 	uint32		*saddr;		/* Stack address		*/
+	status 		s;
 
     dprintf("sys: create(%x, .., %s, ..)\n", funcaddr, name);
 
@@ -44,7 +45,14 @@ pid32	create(
 	prptr = &proctab[pid];
 
 	/* Setup a flat memory model */
-	init_pd(pid);
+	s = init_pd(pid);
+	if(s == SYSERR){
+		kprintf("create: init_pd failed\n");
+		freestk(saddr, ssize);
+		prcount--;
+		restore(mask);
+		return SYSERR;
+	}
 	
 	prptr->vh 		= NO_VHEAP;
 	prptr->hsize 	= 0;

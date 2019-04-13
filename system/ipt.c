@@ -1,8 +1,4 @@
 #include <xinu.h>
-//TODO: Test that page tables actually get removed
-
-//TODO: Remove all panic() statements that are not necessary
-//TODO: Retry networking instructions
 
 void freeFrame(uint32 fr){
 	// Mark the frame as free
@@ -81,6 +77,10 @@ char* getNewFrame(uint32 type, pid32 pid, int32 vpn){
 	}
 	// No frames are free, select a frame to evict
 	fr = pickFrame(); 
+	if(fr == (uint32)SYSERR){
+		//No frame avaliable. 
+		return (char*)SYSERR;
+	}
 
 	// Evict the frame
 	evictFrame(fr);
@@ -182,7 +182,7 @@ void evictFrame(uint32 fr){
 			panic("PANIC: write_bs failed\n");
 		}
 	}
-	hook_pswap_out(pid, vp, fr);
+	hook_pswap_out(pid, vp, fr + FRAME0);
 }
 
 void decRefCount(pt_t* pt, pd_t* pd, uint32 pdi){
@@ -194,7 +194,7 @@ void decRefCount(pt_t* pt, pd_t* pd, uint32 pdi){
 		debug("decRefCount: deleting page table PDI = %d from pd at 0x%08x, pt in fr = %d\n", pdi, pd, fr);
 		freeFrame(fr);
 		pd[pdi].pd_pres = 0;
-		hook_ptable_delete(fr);
+		hook_ptable_delete(fr + FRAME0);
 	}
 
 }
@@ -208,9 +208,9 @@ void  incRefCount(pt_t* pt){
 
 uint32 pickFrameFIFO(void){
 	uint32 fr;
-	if(flistHead == EMPTY){
-		kprintf("flistHead = %d, flistTail = %d\n", flistHead, flistTail);
-		panic("PANIC: pickFrameFIFO: flistHead is empty\n");
+	if(flistTail == EMPTY && flistHead == EMPTY){
+		//No frames in queue
+		return SYSERR;
 	}
 	/* Dequeue from tail */
 	if(flistTail == flistHead){

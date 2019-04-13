@@ -1,12 +1,7 @@
 #include <xinu.h>
 
-//TODO: Remove vaddr2paddr calls
-//TODO: Think about interrupts disabling and enabling
-//TODO: For pf_handler with new page table, do you also get frame for data?
 //TODO: For kill, need to write all frames to disk
-//TODO: Need to handle case where a page is evicted, so page tab is deleted, then page is needed.
-//TODO: As written, this will get new page table and then get new page (not look at backing store)
-//TODO: Add frame0 offset to hook calls
+//TODO: Networking retry 
 
 // Page fault handler. Called by pf_dispatcher (declared in pg.S)
 void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
@@ -83,7 +78,7 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 	pt[pti].pt_pres = 1;
 	set_PTE_addr(&pt[pti], faddr);
 
-	hook_pfault(currpid, a, vpn, fr); 
+	hook_pfault(currpid, a, vpn, fr + FRAME0); 
 	debug("==========================================================\n\n\n");
 
 
@@ -131,6 +126,9 @@ void setup_id_paging(pt_t* pt, char* firstFrame){
 
 pt_t* newPageTable(pid32 pid){
 	char* faddr = getNewFrame(PTAB, pid, NO_VPN);
+	if(faddr == (char*)SYSERR){
+		return (pt_t*)SYSERR;
+	}
 	pt_t* pt = (pt_t*)faddr;
 	int i;
 	for( i = 0; i< PAGETABSIZE; i++){
@@ -145,13 +143,16 @@ pt_t* newPageTable(pid32 pid){
 		pt[i].pt_global		= 0;
 		pt[i].pt_avail		= 1;
 	}
-	hook_ptable_create(faddr2frameNum(faddr));
+	hook_ptable_create(faddr2frameNum(faddr) + FRAME0);
 	return pt;
 }
 
-void init_pd(pid32 pid){
+status init_pd(pid32 pid){
 
 	pd_t* pd = (pd_t*)getNewFrame(PDIR, pid, NO_VPN);
+	if(pd == (pd_t*)SYSERR){
+		return SYSERR;
+	}
 	pd_t* pd_ptr;
 	debug("init_pd: pid = %d\ninit_pd: pd start %x\n", pid, (void*)pd);
 	int  j;
@@ -187,6 +188,7 @@ void init_pd(pid32 pid){
 	pd[DEV_MEM_PD_INDEX].pd_global 		= 1;
 	debug("init_pd: pd end  %x\n", (void*)&pd[PAGEDIRSIZE]);
 
+	return OK;
 
 }
 
