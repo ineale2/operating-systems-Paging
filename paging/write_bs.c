@@ -43,12 +43,14 @@ syscall write_bs (char *src, bsd_t bs_id, uint32 page)
 	 * FIXME : Check id read on RDISK takes blocks from 0 ...
 	 */
 	rd_blk = (bs_id * RD_PAGES_PER_BS + page)*8;
-
+	int attempts = 10;
 	for(i=0; i< 8; i++){
 		//kprintf("write_bs iteration [%d]\r\n", i);
 		memcpy((char *)buf, (char *)(src+i*RD_BLKSIZ),  RD_BLKSIZ);
-		if(write(WRDISK, buf, rd_blk+i) == SYSERR){
-			panic("Could not write to backing store \r\n");
+		while(write(WRDISK, buf, rd_blk+i) == SYSERR){
+			if(attempts-- == 0){
+				panic("Could not write to backing store \r\n");
+			}
 		}
 	}
 

@@ -42,15 +42,15 @@ syscall read_bs (char *dst, bsd_t bs_id, uint32 page)
 	 * FIXME : Check id read on RDISK takes blocks from 0 ...
 	 */
 	rd_blk = (bs_id * RD_PAGES_PER_BS + page)*8;
-
+	int attempts = 10;
 	for(i=0; i< 8; i++){
 		memset(buf, NULLCH, RD_BLKSIZ);
-		if(read(WRDISK, buf, rd_blk+i) == SYSERR){
-			panic("Could not read from backing store \r\n");
+		while(SYSERR == read(WRDISK, buf, rd_blk+i)){
+			if(attempts-- == 0){
+				panic("Could not read from backing store \r\n");
+			}
 		}
-		else{
-			memcpy((char *)(dst+i*RD_BLKSIZ), (char *)buf, RD_BLKSIZ);
-		}
+		memcpy((char *)(dst+i*RD_BLKSIZ), (char *)buf, RD_BLKSIZ);
 	}
 
 	return OK;

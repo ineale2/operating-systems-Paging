@@ -1,5 +1,5 @@
 #include <xinu.h>
-extern uint32 get_test_value(uint32 *addr);
+extern uint32 get_test_value2(uint32 *addr);
 void proc(uint32 inc, uint32 numPages);
 void manyMem(uint32 numPtrs, uint32 size);
 void stopper2(uint32 numPages);
@@ -31,17 +31,15 @@ process	main(void)
   /* DO NOT REMOVE OR COMMENT THIS CALL */
   psinit();
 
-  //page_policy_test();
+  page_policy_test();
 
-	//test1();
-	//test2();
-	//test3();
-	//test4();
-	//test5();
-	//TODO: Test_val_2, times currpid to test page invalidation
-	//TODO: Revert to older version. Does original have similar amounts of free data?
+	test1();
+	test2();
+//	test3();
+	test4();
+	test5();
 	//TODO: Figure out why test6 cannot pass if sleep(10) is in there. rdsbufalloc panics, but doesnt always show the message
-	test6();
+	//test6();
   return OK;
 }
 
@@ -189,7 +187,7 @@ void stopper2(uint32 numPages){
 	uint32 val;
 	kprintf("WRITE: stopper2, currpid = %d\n", currpid);
 	for(i = 0; i < numPages*NBPG; i+=4){
-		*p = get_test_value(p);
+		*p = get_test_value2(p);
 		p++;
 	}
 	kprintf("SUSPEND: stopper2, currpid = %d\n", currpid);
@@ -198,7 +196,7 @@ void stopper2(uint32 numPages){
 	kprintf("CHECKING: stopper2, currpid = %d\n", currpid);
 	p = start;
 	for(i = 0; i < numPages*NBPG; i+=4){
-		val = get_test_value(p);
+		val = get_test_value2(p);
 		if(*p != val){
 			kprintf("FAIL: 0x%08x, data = 0x%08x, expected 0x%08x\n", p, *p, val);
 			panic("Test fail\n");
@@ -231,7 +229,7 @@ void stopper(uint32 numPages){
 
 	p = start;
 	for(i = 0 ; i < numPages*NBPG ; i+=4*inc){
-		*p = get_test_value(p);	
+		*p = get_test_value2(p);	
 		p+=inc;
 		if(i%(10*NBPG) == 0) kprintf("%d ", count+=10);
 	}
@@ -240,7 +238,7 @@ void stopper(uint32 numPages){
 	p = start;
 	count = 0;
 	for(i = 0 ; i < numPages*NBPG ; i+=4*inc){
-		val = get_test_value(p);
+		val = get_test_value2(p);
 		if(*p != val){
 			kprintf("FAIL: 0x%08x, data = 0x%08x, expected 0x%08x\n", p, *p, val);
 			panic("Test fail\n");
@@ -273,7 +271,7 @@ void manyMem(uint32 numPtrs, uint32 size){
 		ptr = p[i];
 		end = (uint32*)( (char*)ptr + size );
 		for( ; ptr < end; ptr++){
-			*ptr = get_test_value(ptr);
+			*ptr = get_test_value2(ptr);
 		} 
 	}
 
@@ -282,7 +280,7 @@ void manyMem(uint32 numPtrs, uint32 size){
 		ptr = p[i];
 		end = (uint32*)( (char*)ptr + size );
 		for( ; ptr < end; ptr++){
-			val = get_test_value(ptr);
+			val = get_test_value2(ptr);
 			if(*ptr != val){
 				kprintf("FAIL: 0x%08x, data = 0x%08x, expected 0x%08x\n", ptr, *ptr, val);
 				panic("Test fail\n");
@@ -310,7 +308,7 @@ void proc(uint32 inc, uint32 numPages){
 	uint32 count = 0;
 	kprintf("WRITING: pid = %d\n", currpid);
 	for(i = 0 ; i < numPages*NBPG ; i+=4*inc){
-		*p = get_test_value(p);	
+		*p = get_test_value2(p);	
 		p+=inc;
 		if(i%(10*NBPG) == 0) kprintf("%d ", count+=10);
 	}
@@ -319,7 +317,7 @@ void proc(uint32 inc, uint32 numPages){
 	p = start;
 	count = 0;
 	for(i = 0 ; i < numPages*NBPG ; i+=4*inc){
-		val = get_test_value(p);
+		val = get_test_value2(p);
 		if(*p != val){
 			kprintf("FAIL: 0x%08x, data = 0x%08x, expected 0x%08x\n", p, *p, val);
 			panic("Test fail\n");
@@ -333,10 +331,10 @@ void proc(uint32 inc, uint32 numPages){
 	}
 	kprintf("proc: pid %d exit\n", currpid);
 }
-/*
-uint32 get_test_value(uint32 *addr) {
+
+uint32 get_test_value2(uint32 *addr) {
   static uint32 v1 = 0x12345678;
   static uint32 v2 = 0xdeadbeef;
-  return (uint32)addr + v1 + ((uint32)addr * v2);
+  return (uint32)addr + v1*currpid + ((uint32)addr * v2);
 }
-*/
+
