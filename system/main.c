@@ -8,7 +8,7 @@ void proc(uint32 inc, uint32 numPages);
 void manyMem(uint32 numPtrs, uint32 size);
 void stopper2(uint32 numPages);
 void stopper(uint32 numPages);
-void looper(uint32, uint32, uint32, pid32);
+void looper(uint32, uint32, sid32);
 void test1(void);
 void test2(void);
 void test3(void);
@@ -37,15 +37,16 @@ process	main(void)
   /* DO NOT REMOVE OR COMMENT THIS CALL */
   psinit();
 
-  page_policy_test();
+//  page_policy_test();
 
-	test1();
-	test2();
+//	test1();
+//	test2();
 //	test3();
-	test4();
-	test5();
+//	test4();
+//	test5();
 	//TODO: Figure out why test6 cannot pass if sleep(10) is in there. rdsbufalloc panics, but doesnt always show the message
 	//test6();
+	test7();
   return OK;
 }
 
@@ -102,13 +103,13 @@ void test4(void){
   	resume(p1);
 	pid32 p2 = vcreate(stopper, INITSTK, numPages, INITPRIO, "proc1", 1, numPages);  	
 	resume(p2);
-	sleep(10);
+	sleep(5);
 	kprintf("Both processes should have suspended\n");
 	kprintf("Killing pid = %d\n", p1);
 	kill(p1);
 	kprintf("Resuming pid = %d\n", p2);
 	resume(p2);
-	sleep(10);
+	sleep(5);
 	kprintf("=============== END OF TEST 4 =============\n");
 }
 
@@ -188,31 +189,30 @@ void test6(void){
 
 void test7(void){
 	kprintf("================== TEST 7 === =============\n");
-	char* policy[4] = {"blank","blank", "FIFO", "GCA "}; 
-	uint32 starttime = myglobalclock;
+	char* policy[5] = {"blank","blank", "blank", "FIFO", "GCA "}; 
+	uint32 starttime = clktime;
 	uint32 pfcstart = pfc;
-//	uint32 wbsc_start = wbsc;
-	uint32 msg = 42;
-//	kprintf("START: POLICY = %s, NFRAMES = %d, Page Fault Count = %d, Backing Store Write Count = %d, Time = %s\n", policy[currpolicy], NFRAMES, pfc-pfcstart, wbsc - wbsc_start, myglobalclock-starttime);
+	kprintf("START: POLICY = %s, NFRAMES = %d, Page Fault Count = %d, Backing Store Write Count = %d, Time = %d\n", policy[currpolicy], NFRAMES, pfc-pfcstart, 0, clktime-starttime);
 	//Create many processes
-	uint32 numPages = 16;
+	uint32 numPages = 32;
 	uint32 numLoops = 1000;
-	pid32 p1 = vcreate(looper, INITSTK, numPages, INITPRIO, "proc1", 4, numPages, numLoops, msg, currpid);  	
+	sid32 s = semcreate(0);
+	if(s == SYSERR) kprintf("FAIL: semcreate returned syserr\n");
+	pid32 p1 = vcreate(looper, INITSTK, numPages, INITPRIO, "proc1", 3, numPages, numLoops, s);  	
 	resume(p1);
 
-	if(receive() != msg){
-		kprintf("FAIL: Wrong message recieved\n");
-	}
-//	kprintf("END  : POLICY = %s, NFRAMES = %d, Page Fault Count = %d, Backing Store Write Count = %d, Time = %s\n", policy[currpolicy], NFRAMES, pfc-pfcstart, wbsc - wbsc_start, myglobalclock-starttime);
+	if(SYSERR == wait(s))
+		kprintf("FAIL: wait failed on sid %d\n", s);
+	kprintf("END  : POLICY = %s, NFRAMES = %d, Page Fault Count = %d, Backing Store Write Count = %d, Time = %d\n", policy[currpolicy], NFRAMES, pfc-pfcstart, 0, clktime-starttime);
 	kprintf("=============== END OF TEST 7 =============\n");
 }
 
-void looper(uint32 numPages, uint32 loops, uint32 msg, pid32 pid){
+void looper(uint32 numPages, uint32 loops, sid32 s){
 	int i;
 	int req = numPages/numRegions;
 	uint32* ptr[numRegions];
 	for( i = 0; i < numRegions; i++){
-		ptr[i] = (uint32*)vgetmem(req);
+		ptr[i] = (uint32*)vgetmem(req*NBPG);
 		if(ptr[i] == (uint32*)SYSERR)
 			panic("FAIL: looper vgetmem call failed\n");
 	}
@@ -220,6 +220,7 @@ void looper(uint32 numPages, uint32 loops, uint32 msg, pid32 pid){
 	char flags[numRegions] = {1,1,1,1};
 	kprintf("Looper start: ");
 	for( i = 0; i < loops; i++){
+		//kprintf("Loop %d\n", i);
 		//Frequently used memory
 		if(flags[0]) 
 			writemem(ptr[1], req, i);
@@ -241,7 +242,7 @@ void looper(uint32 numPages, uint32 loops, uint32 msg, pid32 pid){
 			if(flags[2])
 				writemem(ptr[3], req, i);
 			else
-				readmem(ptr[4], req, i-10);
+				readmem(ptr[3], req, i-10);
 			flags[2] = !flags[2];
 		}
 
@@ -255,6 +256,7 @@ void looper(uint32 numPages, uint32 loops, uint32 msg, pid32 pid){
 			kprintf("%d ", i/100);
 		}
 		
+		
 	}
 
 	for( i = 0; i< numRegions; i++){
@@ -262,10 +264,12 @@ void looper(uint32 numPages, uint32 loops, uint32 msg, pid32 pid){
 			panic("TEST FAIL: looper, vfreemem returned SYSERR\n");
 	}
 	kprintf("\nLooper finished\n");
-	send(msg, pid);
+	if(SYSERR == signal(s))
+		kprintf("FAIL: signal on sid = %d failed\n", s);
 } 
 
 void readmem(uint32* p, uint32 numPages, uint32 count){
+//	kprintf("readmem:  p = 0x%08x\n", p);
 	int i;
 	uint32 val;
 	for(i = 0; i < numPages*NBPG; i+=4){
@@ -279,6 +283,7 @@ void readmem(uint32* p, uint32 numPages, uint32 count){
 }
 
 void writemem(uint32* p, uint32 numPages, uint32 count){
+//	kprintf("writemem: p = 0x%08x\n", p);
 	int i;
 	for(i = 0; i < numPages*NBPG; i+=4){
 		*p= get_test_value3(p, count);

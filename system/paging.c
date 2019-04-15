@@ -1,7 +1,6 @@
 #include <xinu.h>
 
 //TODO: For kill, need to write all frames to disk
-//TODO: Networking retry 
 
 // Page fault handler. Called by pf_dispatcher (declared in pg.S)
 void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
