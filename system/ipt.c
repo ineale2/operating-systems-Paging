@@ -52,13 +52,104 @@ void freeProcFrames(pid32 pid){
 }
 
 void freeFrameGCA(uint32 fr){
+	//Do nothing
 	return;
+}
+/*
+char* getNewFrame(uint32 type, pid32 pid, int32 vpn){
+	if(currpolicy == FIFO)
+		return getNewFrameFIFO(type, pid, vpn);
+	else if(currpolicy == GCA)
+		return getNewFrameGCA(type, pid, vpn);
+	else
+		return (char*)SYSERR;
+}
+*/
+char* getNewFrameGCA(uint32 type, pid32 pid, int32 vpn){
+	uint32 fr = (uint32)-1;
+	uint32 i;
+	uint32 bits;
+	static uint32 nextframe = 0;
+	//Loop over every frame, at most twice, and inspect the bits and state of the frame
+	for(i = 0; i < 2*NFRAMES; i++){
+		nextframe %= NFRAMES;
+		// Get the use modify bits and then choose frame or set bits acoording to GCA
+		bits = getAndSetUM(nextframe);
+		if(ipt[nextframe].status == NOT_USED){
+			fr = nextframe++;
+			init_frame(fr, type, pid, vpn);
+			return frameNum2ptr(fr);
+		}
+		else if(bits == UM00){
+			fr = nextframe++;
+			break;
+		}
+		else{
+			nextframe++;
+		}
+	}
+
+	/* No frames are free, fr chosen for eviction */
+	// Evict the frame
+	evictFrame(fr);
+
+	// Initialize the new frame
+	init_frame(fr, type, pid, vpn);
+	
+	// Return a pointer to the new frame
+	return frameNum2ptr(fr);
+
+}
+
+uint32 getAndSetUM(uint32 fr){
+	pid32 	pid;
+	pd_t* 	pd;
+	pt_t* 	pt;
+	uint32 	vp;
+	char* 	a;
+	uint32 pti;
+	uint32 pdi;
+	
+	vp  = ipt[fr].vpn;
+	pid = ipt[fr].pid;
+	pd  = proctab[pid].pd;
+
+	// Get address from vp
+	a = (char*)(vp*NBPG);
+	pdi = vaddr2pdi(a);
+	pti = vaddr2pti(a);
+	pt  = pdi2pt(pd, pdi);
+
+	//Use bit: pt_acc
+	//Modify bit: pt_dirty
+	char use = pt[pti].pt_acc;
+	char mod = (pt[pti].pt_dirty & !pt[pti].pt_avail);
+	if(use && mod){
+		//NOTE: GCA algorithm says to swap dirty bit, but that would cause evictFrame to fail to write it to memory if chosen
+		//NOTE: Instead, set availiable bit and modify algorithm to swap based on that bit 
+		pt[pti].pt_avail = 1;
+		return UM11;
+	}
+	else if(use && !mod){
+		//Flip use bit
+		pt[pti].pt_acc = 0;
+		return UM10;
+	}
+	else if(!use && !mod){
+		return UM00;
+	}
+	else{
+		panic("getAndSetUM: invalid bit state\n");
+		return 0; //will not execute
+	}
+
 }
 
 char* getNewFrame(uint32 type, pid32 pid, int32 vpn){
+	uint32 fr;
 	uint32 i;
 	static uint32 nextframe = 0;
-	uint32 fr;
+	
 
 	/* Check all frame slots */
 	for(i = 0; i < NFRAMES; i++){
@@ -105,9 +196,6 @@ void init_frame(uint32 fr, uint32 type, pid32 pid, int32 vpn){
 	if(type == PAGE && currpolicy == FIFO){
 		init_frame_FIFO(fr);
 	}
-	else if(type == PAGE &&  currpolicy == GCA){
-		init_frame_GCA(fr);
-	}
 }
 
 void init_frame_FIFO(uint32 fr){
@@ -125,7 +213,7 @@ void init_frame_FIFO(uint32 fr){
 }
 
 void init_frame_GCA(uint32 fr){
-	panic("PANIC: init_frame_GCA\n");
+	//place holder
 	return;
 }
 

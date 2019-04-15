@@ -53,6 +53,8 @@ syscall write_bs (char *src, bsd_t bs_id, uint32 page)
 			}
 		}
 	}
+	// Increment counter
+	//wbsc++;
 
 	return OK;
 }

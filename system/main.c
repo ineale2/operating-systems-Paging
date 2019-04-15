@@ -1,15 +1,21 @@
 #include <xinu.h>
+#define numRegions 4
+void writemem(uint32* p, uint32 numPages, uint32 count);
+void readmem(uint32* p, uint32 numPages, uint32 count);
 extern uint32 get_test_value2(uint32 *addr);
+uint32 get_test_value3(uint32 *addr, uint32 seed);
 void proc(uint32 inc, uint32 numPages);
 void manyMem(uint32 numPtrs, uint32 size);
 void stopper2(uint32 numPages);
 void stopper(uint32 numPages);
+void looper(uint32, uint32, uint32, pid32);
 void test1(void);
 void test2(void);
 void test3(void);
 void test4(void);
 void test5(void);
 void test6(void);
+void test7(void);
 
 extern void page_policy_test(void);
 
@@ -180,6 +186,106 @@ void test6(void){
 
 }
 
+void test7(void){
+	kprintf("================== TEST 7 === =============\n");
+	char* policy[4] = {"blank","blank", "FIFO", "GCA "}; 
+	uint32 starttime = myglobalclock;
+	uint32 pfcstart = pfc;
+//	uint32 wbsc_start = wbsc;
+	uint32 msg = 42;
+//	kprintf("START: POLICY = %s, NFRAMES = %d, Page Fault Count = %d, Backing Store Write Count = %d, Time = %s\n", policy[currpolicy], NFRAMES, pfc-pfcstart, wbsc - wbsc_start, myglobalclock-starttime);
+	//Create many processes
+	uint32 numPages = 16;
+	uint32 numLoops = 1000;
+	pid32 p1 = vcreate(looper, INITSTK, numPages, INITPRIO, "proc1", 4, numPages, numLoops, msg, currpid);  	
+	resume(p1);
+
+	if(receive() != msg){
+		kprintf("FAIL: Wrong message recieved\n");
+	}
+//	kprintf("END  : POLICY = %s, NFRAMES = %d, Page Fault Count = %d, Backing Store Write Count = %d, Time = %s\n", policy[currpolicy], NFRAMES, pfc-pfcstart, wbsc - wbsc_start, myglobalclock-starttime);
+	kprintf("=============== END OF TEST 7 =============\n");
+}
+
+void looper(uint32 numPages, uint32 loops, uint32 msg, pid32 pid){
+	int i;
+	int req = numPages/numRegions;
+	uint32* ptr[numRegions];
+	for( i = 0; i < numRegions; i++){
+		ptr[i] = (uint32*)vgetmem(req);
+		if(ptr[i] == (uint32*)SYSERR)
+			panic("FAIL: looper vgetmem call failed\n");
+	}
+	//Alternate between reading and writing memory
+	char flags[numRegions] = {1,1,1,1};
+	kprintf("Looper start: ");
+	for( i = 0; i < loops; i++){
+		//Frequently used memory
+		if(flags[0]) 
+			writemem(ptr[1], req, i);
+		else 
+			readmem(ptr[1], req, i-1);
+		flags[0] = !flags[0];
+
+		//Less frequently used memory
+		if(i%5 == 0){
+			if(flags[1]) 
+				writemem(ptr[2], req, i);
+			else
+				readmem(ptr[2], req, i-5);
+			flags[1] = !flags[1];
+		}
+	
+		// Rarely used memory
+		if(i%10 == 0){
+			if(flags[2])
+				writemem(ptr[3], req, i);
+			else
+				readmem(ptr[4], req, i-10);
+			flags[2] = !flags[2];
+		}
+
+		// Almost never used memory
+		if(i%100 == 0){
+			if(flags[3])
+				writemem(ptr[4], req, i);
+			else
+				readmem(ptr[4], req, i-100);
+			flags[3] = !flags[3];
+			kprintf("%d ", i/100);
+		}
+		
+	}
+
+	for( i = 0; i< numRegions; i++){
+		if(SYSERR == vfreemem((char*)ptr[i], req))
+			panic("TEST FAIL: looper, vfreemem returned SYSERR\n");
+	}
+	kprintf("\nLooper finished\n");
+	send(msg, pid);
+} 
+
+void readmem(uint32* p, uint32 numPages, uint32 count){
+	int i;
+	uint32 val;
+	for(i = 0; i < numPages*NBPG; i+=4){
+		val = get_test_value3(p, count);
+		if(val != *p){
+			kprintf("Addr: 0x%08x, data: 0x%08x, expected: 0x%08x\n", p, *p, val);
+			panic("FAIL: Checking memory failed\n");
+		}
+		p++;
+	}
+}
+
+void writemem(uint32* p, uint32 numPages, uint32 count){
+	int i;
+	for(i = 0; i < numPages*NBPG; i+=4){
+		*p= get_test_value3(p, count);
+		p++;
+	}
+}
+
 void stopper2(uint32 numPages){
 	uint32* start = (uint32*)vgetmem(numPages*NBPG);
 	uint32* p = start;
@@ -338,3 +444,8 @@ uint32 get_test_value2(uint32 *addr) {
   return (uint32)addr + v1*currpid + ((uint32)addr * v2);
 }
 
+uint32 get_test_value3(uint32 *addr, uint32 seed) {
+  static uint32 v1 = 0x12345678;
+  static uint32 v2 = 0xdeadbeef;
+  return (uint32)addr*seed + v1*currpid + ((uint32)addr * v2);
+}

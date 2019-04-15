@@ -15,10 +15,15 @@
 #define PAGE		3
 
 /* Frame FIFO Queue */
-
 #ifndef EMPTY
 #define EMPTY 	-1
 #endif
+
+/* Global clock algorithm status */
+#define UM00	0
+#define UM10	1
+#define	UM11	2
+
 /* Inverted page table data structure */
 
 typedef struct {
@@ -42,6 +47,8 @@ void  freeFrame(uint32 fr);
 void  freeFrameFIFO(uint32 fr);
 void  freeFrameGCA(uint32 fr);
 void  freeProcFrames(pid32 pid);
+char* getNewFrameFIFO(uint32 type, pid32 pid, int32 vpn);
+char* getNewFrameGCA(uint32 type, pid32 pid, int32 vpn);
 
 /* Initialization functions */
 void init_frame(uint32 fr, uint32 type, pid32 pid, int32 vpn);
@@ -55,12 +62,16 @@ uint32 pickFrame(void);
 uint32 pickFrameGCA(void); 
 uint32 pickFrameFIFO(void); 
 
+
 /* Helper functions */
 char*  frameNum2ptr(uint32 frameNum);
 uint32 faddr2frameNum(char* faddr);
 void   incRefCount(pt_t* pt);
 void   decRefCount(pt_t* pt, pd_t* pd, uint32 pdi);
 void   clearFrame(uint32 fr);
+
+/* Global clock algorithm helper functions */
+uint32 getAndSetUM(uint32);
 
 /* Debug functions */
 void printFrameQueue(void);
