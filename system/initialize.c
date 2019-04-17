@@ -218,6 +218,7 @@ static void initialize_paging()
 
 	// Initialize counters
 	pfc = 0;
+	gca_sem = semcreate(1);	
 	free_bs_count = MAX_BS_ENTRIES;;
 
 	// Initialize inverted page table

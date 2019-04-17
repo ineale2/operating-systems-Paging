@@ -17,7 +17,13 @@ syscall srpolicy(int policy)
 
 	case GCA:
 		currpolicy = GCA;
-    return OK;
+		/* Initialize the GCA semaphore */
+		if(SYSERR == gca_sem){
+			kprintf("Could not initialize GCA semaphore\n");
+			return SYSERR;
+		}
+		else
+			return OK;
 
 	default:
 		return SYSERR;

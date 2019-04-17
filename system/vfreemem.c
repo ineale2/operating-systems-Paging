@@ -57,6 +57,7 @@ syscall	vfreemem(
 	}
 
 	vmemlist->mlength += nbytes;
+	debug("vfreemem: vmemlist->mlength = %d\n", vmemlist->mlength);
 
 	/* Either coalesce with previous block or add to free list */
 

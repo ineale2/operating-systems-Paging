@@ -55,7 +55,7 @@ void freeFrameGCA(uint32 fr){
 	//Do nothing
 	return;
 }
-/*
+
 char* getNewFrame(uint32 type, pid32 pid, int32 vpn){
 	if(currpolicy == FIFO)
 		return getNewFrameFIFO(type, pid, vpn);
@@ -64,34 +64,51 @@ char* getNewFrame(uint32 type, pid32 pid, int32 vpn){
 	else
 		return (char*)SYSERR;
 }
-*/
+
 char* getNewFrameGCA(uint32 type, pid32 pid, int32 vpn){
 	uint32 fr = (uint32)-1;
 	uint32 i;
 	uint32 bits;
 	static uint32 nextframe = 0;
 	//Loop over every frame, at most twice, and inspect the bits and state of the frame
-	for(i = 0; i < 2*NFRAMES; i++){
+	//NOTE: Can loop 3 times because of global frames. Could start on a global frame
+	//TODO: Consider making this a while loop. Also, test1 is freezing.
+	//Wait on gca_sem to make sure no one else is in the critical section 
+	//This is to prevent the unfortunate bugs related to read_bs and write_bs, which are blocking calls
+	//There exists a condition where multiple processes believe the same frame is avaliable for writing
+	//debug("gca_sem: pid %d wait\n", currpid);
+	//wait(gca_sem);
+//	debug("gca_sem: pid %d has the lock\n", currpid);
+	for(i = 0; i <= 3*NFRAMES; i++){
 		nextframe %= NFRAMES;
+//		debug("getNewFrameGCA: Loop: i = %d, nextframe = %d\n", i, nextframe); 
 		// Get the use modify bits and then choose frame or set bits acoording to GCA
-		bits = getAndSetUM(nextframe);
+		
 		if(ipt[nextframe].status == NOT_USED){
 			fr = nextframe++;
+			debug("getNewFrameGCA: no eviction, free frame fr = %d\n", fr);
 			init_frame(fr, type, pid, vpn);
+//			debug("gca_sem: pid %d releasing lock\n", currpid);
+	//		signal(gca_sem);
 			return frameNum2ptr(fr);
 		}
-		else if(bits == UM00){
-			fr = nextframe++;
-			break;
+		else if(ipt[nextframe].status == PAGE){
+			bits = getAndSetUM(nextframe);
+			if(bits == UM00){
+				fr = nextframe++;
+				break;
+			}
 		}
-		else{
-			nextframe++;
-		}
+		// Frame was not used for a page, or it was not chosen by GCA, go to next frame
+		nextframe++;
+		
 	}
-
+	debug("getNewFrameGCA: no free frame... evicting fr = %d\n", fr);
 	/* No frames are free, fr chosen for eviction */
 	// Evict the frame
 	evictFrame(fr);
+//	debug("gca_sem: pid %d releasing lock\n", currpid);
+	//signal(gca_sem);
 
 	// Initialize the new frame
 	init_frame(fr, type, pid, vpn);
@@ -112,6 +129,12 @@ uint32 getAndSetUM(uint32 fr){
 	
 	vp  = ipt[fr].vpn;
 	pid = ipt[fr].pid;
+	if(pid == GLOBAL || pid == NO_PROCESS || vp == NO_VPN){
+		debug("getAndSetUM: bad condition, pid = %d, vpn = %d\n", pid, vp);
+		//return a value that is not UM00 so that this frame will not be selected
+		return SKIP_FRAME;
+	}
+	//debug("getAndSet: fr = %d, pid = %d, vpn = %d\n", fr, pid, vp);
 	pd  = proctab[pid].pd;
 
 	// Get address from vp
@@ -119,23 +142,25 @@ uint32 getAndSetUM(uint32 fr){
 	pdi = vaddr2pdi(a);
 	pti = vaddr2pti(a);
 	pt  = pdi2pt(pd, pdi);
-
 	//Use bit: pt_acc
 	//Modify bit: pt_dirty
 	char use = pt[pti].pt_acc;
-	char mod = (pt[pti].pt_dirty & !pt[pti].pt_avail);
+	char mod = (pt[pti].pt_dirty && !pt[pti].pt_avail);
 	if(use && mod){
-		//NOTE: GCA algorithm says to swap dirty bit, but that would cause evictFrame to fail to write it to memory if chosen
+		//NOTE: GCA algorithm says to swap dirty bit, but that would cause evictFrame to fail to write it to memory if chosengt
 		//NOTE: Instead, set availiable bit and modify algorithm to swap based on that bit 
 		pt[pti].pt_avail = 1;
+//		debug("getAndSetUM: vp = %d, pid = %d, a = 0x%08x, pdi = %d, pti = %d, use(1) = %d, mod(1) = %d \n", vp, pid, a, pdi, pti, use, mod);
 		return UM11;
 	}
 	else if(use && !mod){
 		//Flip use bit
+//		debug("getAndSetUM: vp = %d, pid = %d, a = 0x%08x, pdi = %d, pti = %d, use(1) = %d, mod(0) = %d \n", vp, pid, a, pdi, pti, use, mod);
 		pt[pti].pt_acc = 0;
 		return UM10;
 	}
 	else if(!use && !mod){
+//		debug("getAndSetUM: vp = %d, pid = %d, a = 0x%08x, pdi = %d, pti = %d, use(0) = %d, mod(0) = %d \n", vp, pid, a, pdi, pti, use, mod);
 		return UM00;
 	}
 	else{
@@ -145,7 +170,7 @@ uint32 getAndSetUM(uint32 fr){
 
 }
 
-char* getNewFrame(uint32 type, pid32 pid, int32 vpn){
+char* getNewFrameFIFO(uint32 type, pid32 pid, int32 vpn){
 	uint32 fr;
 	uint32 i;
 	static uint32 nextframe = 0;
@@ -159,7 +184,7 @@ char* getNewFrame(uint32 type, pid32 pid, int32 vpn){
 			fr = nextframe++;
 			// Mark the frame as used
 			init_frame(fr, type, pid, vpn);
-			debug("getNewFrame: no eviction, free frame fr = %d\n", fr);
+			debug("getNewFrameFIFO: no eviction, free frame fr = %d\n", fr);
 			return frameNum2ptr(fr);
 		}
 		else{
@@ -265,7 +290,10 @@ void evictFrame(uint32 fr){
 			kill(currpid);
 		}
 		// Store changes in backing store
+		debug("writeBS: proc %d writing fr = %d beloning to pid = %d to backing store\n", currpid, fr, pid); 
 		s = write_bs(faddr, bsd, offset);
+		debug("writeBS: proc %d done\n", currpid);
+		debug("after write_bs\n");
 		if( s == SYSERR){
 			panic("PANIC: write_bs failed\n");
 		}

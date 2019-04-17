@@ -20,9 +20,10 @@
 #endif
 
 /* Global clock algorithm status */
-#define UM00	0
-#define UM10	1
-#define	UM11	2
+#define UM00		0
+#define UM10		1
+#define	UM11		2
+#define SKIP_FRAME 	3
 
 /* Inverted page table data structure */
 
@@ -36,6 +37,9 @@ typedef struct {
 } frame_t;
 
 frame_t ipt[NFRAMES];
+
+/* Sempahore (used as mutex) for GCA */
+sid32 gca_sem;
 
 //Head and tail of FIFO queue for frame replacement
 uint32 flistHead;

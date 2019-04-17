@@ -18,6 +18,7 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 
 	mask = disable();
 	pfc++;
+	wait(gca_sem);
 	debug("================= PAGE FAULT HANDLER =====================\n");
 	debug("PFC: %04d CR2: 0x%x\n", pfc, readCR2());
 	printErrCode(pfErrCode);	
@@ -33,6 +34,7 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 		kprintf("Address 0x%x invalid for pid = %d\n", a, currpid);
 		restore(mask);
 		kill(currpid);
+		signal(gca_sem);
 		return; //Will never execute
 	}
 
@@ -48,6 +50,7 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 
 	// Case 1: Check if page table is not present
 	if(pd[pdi].pd_pres == 0){
+		debug("page table not present!\n");
 		//Allocate a new page table at set the page directory entry
 		pt = newPageTable(currpid);
 
@@ -66,7 +69,9 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 
 	// Copy the page in the backing store to the new frame
 	debug("calling read_bs: bsd = %d, offset = %d\n", (uint32)bsd, offset);
+	debug("read_bs: proc %d reading into fr = %d\n", currpid, fr);
 	e = read_bs(faddr, bsd, offset);
+	debug("read_bs: proc %d done\n", currpid);
 	if(e == SYSERR){
 		panic("read_bs failed\n");
 	}
@@ -77,10 +82,11 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 	pt[pti].pt_pres = 1;
 	set_PTE_addr(&pt[pti], faddr);
 
+	debug("Mapping on Exit: va = 0x%08x maps to 0x%08x\n", a, vaddr2paddr(a, faddr));
 	hook_pfault(currpid, a, vpn, fr + FRAME0); 
 	debug("==========================================================\n\n\n");
 
-
+	signal(gca_sem);
 	restore(mask);
 }
 
@@ -113,7 +119,7 @@ void setup_id_paging(pt_t* pt, char* firstFrame){
 		pt[i].pt_dirty  = 0;
 		pt[i].pt_mbz 	= 0;
 		pt[i].pt_global = 0;
-		pt[i].pt_avail 	= 1;
+		pt[i].pt_avail 	= 0;
 	
 		set_PTE_addr(&pt[i], frameAddr);
 
@@ -140,18 +146,20 @@ pt_t* newPageTable(pid32 pid){
 		pt[i].pt_dirty  	= 0;
 		pt[i].pt_mbz 		= 0;
 		pt[i].pt_global		= 0;
-		pt[i].pt_avail		= 1;
+		pt[i].pt_avail		= 0;
 	}
 	hook_ptable_create(faddr2frameNum(faddr) + FRAME0);
 	return pt;
 }
 
 status init_pd(pid32 pid){
-
+	debug("start of init pd\n");
 	pd_t* pd = (pd_t*)getNewFrame(PDIR, pid, NO_VPN);
 	if(pd == (pd_t*)SYSERR){
+		debug("bad ret bal\n");
 		return SYSERR;
 	}
+	debug("after net new frame pd\n");
 	pd_t* pd_ptr;
 	debug("init_pd: pid = %d\ninit_pd: pd start %x\n", pid, (void*)pd);
 	int  j;
@@ -170,7 +178,7 @@ status init_pd(pid32 pid){
 		pd_ptr->pd_mbz   	= 0;
 		pd_ptr->pd_fmb   	= 0;
 		pd_ptr->pd_global	= 0;
-		pd_ptr->pd_avail	= 1;
+		pd_ptr->pd_avail	= 0;
 		pd_ptr->pd_base		= 0;
 	}
 	//Set global page tables
@@ -197,7 +205,7 @@ void walkPDIR(void){
 	uint32 counter = 0;
 	
 	while(vaddr < (char*)0x00FFFFFF){
-		vaddr2paddr(vaddr);
+		vaddr2paddr(vaddr, vaddr);
 		vaddr = vaddr + 1;
 		counter++;
 		if(counter%1000000 == 0){
@@ -206,7 +214,7 @@ void walkPDIR(void){
 	}
 	vaddr = (char*)0x90000000;
 	while(vaddr < (char*)0x903FFFFF){
-		vaddr2paddr(vaddr);
+		vaddr2paddr(vaddr, vaddr);
 		vaddr = vaddr + 1;
 		counter++;
 		if(counter%1000000 == 0){
@@ -217,7 +225,7 @@ void walkPDIR(void){
 
 }
 
-char* vaddr2paddr(char* vaddr){
+char* vaddr2paddr(char* vaddr, char* expected){
 	char* paddr;
 	pd_t* pd = proctab[currpid].pd;
 	pt_t* pt;
@@ -231,9 +239,9 @@ char* vaddr2paddr(char* vaddr){
 	paddr = (char*)(pt[pti].pt_base << 12);
 	paddr =(char*)( (uint32)paddr | offset);
 	
-	if(vaddr != paddr){
-		debug("========= ERROR PADDR != VADDR ===\n");
-		debug("vaddr: 0x%x paddr: 0x%x\n", vaddr, paddr);
+	if(expected != paddr){
+		debug("========= ERROR PADDR != EXPECTED  ===\n");
+		debug("vaddr: 0x%x paddr: 0x%x, expected 0x%x\n", vaddr, paddr, expected);
 		debug("pdi: %d, pti: %d, offset: %d\n", pdi, pti, offset);
 		debug("pt = 0x%x, pte = 0x%x\n", pt, (char*)(pt[pti].pt_base << 12));
 		debug("vaddr:\n");
@@ -244,7 +252,7 @@ char* vaddr2paddr(char* vaddr){
 		printPTE(pt, pti);
 		printPT(pt);
 		dump32((long)pt[pti].pt_base << 12);
-		debug("==================================\n\n\n");
+		debug("========== END VADDR2PADDR =======\n\n\n");
 	}
 	return paddr;
 

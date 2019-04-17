@@ -52,9 +52,7 @@ void	net_init (void)
 		panic("Cannot create ip output queue semaphore");
 		return;
 	}
-
 	/* Create the IP output process */
-
 	resume(create(ipout, NETSTK, NETPRIO, "ipout", 0, NULL));
 
 	/* Create a network input process */

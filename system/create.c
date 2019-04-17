@@ -45,6 +45,7 @@ pid32	create(
 	prptr = &proctab[pid];
 
 	/* Setup a flat memory model */
+	debug("init pd...\n");
 	s = init_pd(pid);
 	if(s == SYSERR){
 		kprintf("create: init_pd failed\n");
@@ -53,6 +54,7 @@ pid32	create(
 		restore(mask);
 		return SYSERR;
 	}
+	debug("after init pd\n");
 	
 	prptr->vh 		= NO_VHEAP;
 	prptr->hsize 	= 0;

@@ -91,7 +91,6 @@ char* gpt[NUM_GLOBAL_PT];
 /* Global device page table */
 char* dpt; 
 
-
 /* Interrupt handler for page faults */
 void pf_handler(void);
 
@@ -114,6 +113,7 @@ extern void invalPage(char*);
 extern uint32 readCR2(void);
 extern uint32 readCR3(void);
 extern uint32 readCR0(void);
+extern void writeCR2(uint32);
 
 /* PDIR and PTAB conversion functions */
 uint32 vaddr2pdi(char* vaddr);
@@ -128,7 +128,7 @@ uint32 pte2pti(pt_t* pt);
 void dumpmem(void);
 void dump32(unsigned long n);
 void walkPDIR(void);
-char* vaddr2paddr(char* vaddr);
+char* vaddr2paddr(char* vaddr, char* expected);
 void dumpframe(uint32 fr);
 void printPDE(pd_t* pd, uint32 pdi);
 void printPTE(pt_t* pt, uint32 pti);

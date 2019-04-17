@@ -16,12 +16,15 @@ void test4(void);
 void test5(void);
 void test6(void);
 void test7(void);
+//TODO: Use memory, free memory, use memory again (make sure state is consisient after)
+//TODO: Also in this test, verify number of page faults is what is expected
 
 extern void page_policy_test(void);
 
 process	main(void)
 {
-  srpolicy(FIFO);
+  srpolicy(GCA);
+	kprintf("after sr policy\n");
 
   /* Start the network */
   /* DO NOT REMOVE OR COMMENT BELOW */
@@ -37,16 +40,19 @@ process	main(void)
   /* DO NOT REMOVE OR COMMENT THIS CALL */
   psinit();
 
-//  page_policy_test();
+  page_policy_test();
 
-//	test1();
-//	test2();
-//	test3();
-//	test4();
-//	test5();
+  	kprintf("TESTING START\n");
+	test1();
+	test2();
+	test4();
+	test5();
 	//TODO: Figure out why test6 cannot pass if sleep(10) is in there. rdsbufalloc panics, but doesnt always show the message
 	//test6();
 	test7();
+
+//	test3();
+	kprintf("END OF ALL TESTS\n");
   return OK;
 }
 
@@ -352,7 +358,7 @@ void stopper(uint32 numPages){
 		val = get_test_value2(p);
 		if(*p != val){
 			kprintf("FAIL: 0x%08x, data = 0x%08x, expected 0x%08x\n", p, *p, val);
-			panic("Test fail\n");
+			panic("stopper: Test fail\n");
 		}
 		p+=inc;
 		if(i%(10*NBPG) == 0) kprintf("%d ", count+=10);
@@ -361,7 +367,7 @@ void stopper(uint32 numPages){
 		kprintf("vfreemem failed\n");
 		panic("test failed\n");
 	}
-	kprintf("\nproc: pid %d exit\n", currpid);
+	kprintf("\nstopper: pid %d exit\n", currpid);
 }
 
 
@@ -394,7 +400,11 @@ void manyMem(uint32 numPtrs, uint32 size){
 			val = get_test_value2(ptr);
 			if(*ptr != val){
 				kprintf("FAIL: 0x%08x, data = 0x%08x, expected 0x%08x\n", ptr, *ptr, val);
-				panic("Test fail\n");
+				//Dump all memory in this frame
+				char* faddr = vaddr2paddr((char*)ptr, (char*)0);	
+				kprintf("Next 3 expected values: 0x%08x, 0x%08x, 0x%08x\n", get_test_value2(ptr + 1), get_test_value2(ptr + 2), get_test_value2(ptr + 3));
+				dumpframe(faddr2frameNum(faddr));	
+				panic("manyMem: Test fail\n");
 			}
 		} 
 	}
@@ -431,7 +441,11 @@ void proc(uint32 inc, uint32 numPages){
 		val = get_test_value2(p);
 		if(*p != val){
 			kprintf("FAIL: 0x%08x, data = 0x%08x, expected 0x%08x\n", p, *p, val);
-			panic("Test fail\n");
+			//Dump all memory in this frame
+			char* faddr = vaddr2paddr((char*)p, (char*)0);	
+			kprintf("Next 3 expected values: 0x%08x, 0x%08x, 0x%08x\n", get_test_value2(p + 1), get_test_value2(p + 2), get_test_value2(p + 3));
+			dumpframe(faddr2frameNum(faddr));	
+			panic("proc: Test fail\n");
 		}
 		p+=inc;
 		if(i%(10*NBPG) == 0) kprintf("%d ", count+=10);

@@ -24,7 +24,6 @@ char  	*vgetmem(
 		restore(mask);
 		return (char *)SYSERR;
 	}
-	debug("vgetmem: pid = %d, nbytes = %d\n", currpid, nbytes);
 	if( prptr->vmeminit == 0){
 		vmeminit(prptr);
 	}
@@ -39,6 +38,7 @@ char  	*vgetmem(
 			prev->mnext = curr->mnext;
 			vmemlist->mlength -= nbytes;
 			restore(mask);
+			debug("vgetmem: pid = %d, nbytes = %d, match: vmemlist->mlength %d\n", currpid, nbytes, vmemlist->mlength); 
 			return (char *)(curr);
 
 		} else if (curr->mlength > nbytes) { /* Split big block	*/
@@ -48,7 +48,7 @@ char  	*vgetmem(
 			leftover->mnext = curr->mnext;
 			leftover->mlength = curr->mlength - nbytes;
 			vmemlist->mlength -= nbytes;
-			debug("vgetmem: leftover->mlength: %d == 0x%x, vmemlist->mlength %d\n", leftover->mlength, leftover->mlength, vmemlist->mlength); 
+			debug("vgetmem: pid = %d, nbytes = %d, split: leftover->mlength: %d == %u, vmemlist->mlength %d\n", currpid, nbytes, leftover->mlength, leftover->mlength, vmemlist->mlength); 
 			restore(mask);
 			return (char *)(curr);
 		} else {			/* Move to next block	*/
