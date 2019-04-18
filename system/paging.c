@@ -18,15 +18,19 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 
 	mask = disable();
 	pfc++;
-	wait(gca_sem);
+	a = (char*)readCR2();
+	wait(pf_sem);
 	debug("================= PAGE FAULT HANDLER =====================\n");
 	debug("PFC: %04d CR2: 0x%x\n", pfc, readCR2());
+	if(a != (char*)readCR2()) panic("CR2 changed!\n");
 	printErrCode(pfErrCode);	
 	debug("PID = %d\n", currpid);
 	// Increment page fault counter for instrumentation
 
+	//TODO: 1) Bound critical section. Test GCA vs. FIFO. See if you can replace sempahore with a property in IPT that says if this has been chosen
+	//TODO: This could cause the frame to be passed over, will be set when chosen, and cleared when written
+	//TODO: 3) Write test cases for correct number of page faults. Write test cases for getmem/free/getmem with random values. 
 	//Get the faulted address
-	a = (char*)readCR2();
 	pd = proctab[currpid].pd;
 
 	//If the address is invalid, kill the process
@@ -34,7 +38,7 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 		kprintf("Address 0x%x invalid for pid = %d\n", a, currpid);
 		restore(mask);
 		kill(currpid);
-		signal(gca_sem);
+		signal(pf_sem);
 		return; //Will never execute
 	}
 
@@ -85,8 +89,8 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 	debug("Mapping on Exit: va = 0x%08x maps to 0x%08x\n", a, vaddr2paddr(a, faddr));
 	hook_pfault(currpid, a, vpn, fr + FRAME0); 
 	debug("==========================================================\n\n\n");
-
-	signal(gca_sem);
+//	ipt[fr].gcaChosen = AVAIL;
+	signal(pf_sem);
 	restore(mask);
 }
 

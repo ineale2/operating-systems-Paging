@@ -221,6 +221,9 @@ void init_frame(uint32 fr, uint32 type, pid32 pid, int32 vpn){
 	if(type == PAGE && currpolicy == FIFO){
 		init_frame_FIFO(fr);
 	}
+	if(type == PAGE && currpolicy == GCA){
+		init_frame_GCA(fr);
+	}
 }
 
 void init_frame_FIFO(uint32 fr){

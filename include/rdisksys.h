@@ -16,7 +16,7 @@
 #endif
 
 #ifndef	RD_SERVER_PORT
-#define	RD_SERVER_PORT	33580
+#define	RD_SERVER_PORT	33581
 #endif
 
 #ifndef	RD_LOC_PORT

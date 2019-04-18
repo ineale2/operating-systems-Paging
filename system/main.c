@@ -9,6 +9,7 @@ void manyMem(uint32 numPtrs, uint32 size);
 void stopper2(uint32 numPages);
 void stopper(uint32 numPages);
 void looper(uint32, uint32, sid32);
+void invalidMemAccess(uint32, char*);
 void test1(void);
 void test2(void);
 void test3(void);
@@ -16,14 +17,18 @@ void test4(void);
 void test5(void);
 void test6(void);
 void test7(void);
-//TODO: Use memory, free memory, use memory again (make sure state is consisient after)
+void test8(void);
+void test9(void);
+//TODO: Use memory, free memory, use memory again (make sure state is consisient after). Do this for many proceses
 //TODO: Also in this test, verify number of page faults is what is expected
+//TODO: Test 6 will not pass with GCA or FIF . Try to see if a bsd has been improperly allocated (try printing bsd that the process is printing to, see how many are avaliable, what the state of this bsd is)
+//TODO: Need to quanity performance impact of FIFO vs GCA
 
 extern void page_policy_test(void);
 
 process	main(void)
 {
-  srpolicy(GCA);
+  srpolicy(FIFO);
 	kprintf("after sr policy\n");
 
   /* Start the network */
@@ -40,18 +45,19 @@ process	main(void)
   /* DO NOT REMOVE OR COMMENT THIS CALL */
   psinit();
 
-  page_policy_test();
+  //page_policy_test();
 
   	kprintf("TESTING START\n");
-	test1();
-	test2();
-	test4();
-	test5();
+//	test1();
+///	test2();
+//	test4();
+//	test5();
 	//TODO: Figure out why test6 cannot pass if sleep(10) is in there. rdsbufalloc panics, but doesnt always show the message
-	//test6();
-	test7();
-
+	test6();
+//	test7();
+//	test8();
 //	test3();
+//	test9();
 	kprintf("END OF ALL TESTS\n");
   return OK;
 }
@@ -145,10 +151,11 @@ void test6(void){
 	kprintf("\n=================== TEST 6 ================\n");
 	kprintf("Testing error calls and edge cases\n");
 	ASSERT(NFRAMES < 30);
-	int numPages = 1;
+	int numPages = 1; 
 	pid32 pid[NFRAMES];
 	//9th vcreate should error out	
 	int i;
+	
 	for(i = 0; i < 8; i++){
 		pid[i] = vcreate(stopper2, INITSTK/16, numPages, INITPRIO, "proc1", 1, numPages);  
 		if(pid[i] == (pid32)SYSERR)
@@ -162,9 +169,12 @@ void test6(void){
 		if(SYSERR == kill(pid[i]))
 			kprintf("TEST FAIL, could not kill pid %d\n", pid[i]);
 	}
+	
 	// Now run a normal process
-	numPages = 350;
+	printFrameQueue();
 	kprintf("Creating normal process\n");
+	numPages = 350; //For some reason, this does not work. Why? 
+	//numPages = 40;
 	pid32 p1 = vcreate(proc, INITSTK, numPages, INITPRIO, "proc1", 2, 512, numPages);  	
 	resume(p1);
 	sleep(10);
@@ -172,6 +182,7 @@ void test6(void){
 	kprintf("\nProcess %d should have finished by now\n", p1);
 	// Now create so many processes that there are not enough frames for PDIR
 	//kprintf("Now calling create()\n");
+	kprintf("Calling create... init_pd should fail\n");
 	for(i = 0; i < NFRAMES; i++){
 		//kprintf("%d ", i);
 		pid[i] = create(stopper2, INITSTK/16, INITPRIO, "proc1", 1, -1); 
@@ -194,13 +205,13 @@ void test6(void){
 }
 
 void test7(void){
-	kprintf("================== TEST 7 === =============\n");
+	kprintf("\n================== TEST 7 === =============\n");
 	char* policy[5] = {"blank","blank", "blank", "FIFO", "GCA "}; 
 	uint32 starttime = clktime;
 	uint32 pfcstart = pfc;
-	kprintf("START: POLICY = %s, NFRAMES = %d, Page Fault Count = %d, Backing Store Write Count = %d, Time = %d\n", policy[currpolicy], NFRAMES, pfc-pfcstart, 0, clktime-starttime);
+	uint32 numPages = 24;
+	kprintf("START: POLICY = %s, NFRAMES = %d, NUMPAGES, = %d, Page Fault Count = %d, Time = %d\n", policy[currpolicy], NFRAMES, numPages, pfc-pfcstart, clktime-starttime);
 	//Create many processes
-	uint32 numPages = 32;
 	uint32 numLoops = 1000;
 	sid32 s = semcreate(0);
 	if(s == SYSERR) kprintf("FAIL: semcreate returned syserr\n");
@@ -209,8 +220,51 @@ void test7(void){
 
 	if(SYSERR == wait(s))
 		kprintf("FAIL: wait failed on sid %d\n", s);
-	kprintf("END  : POLICY = %s, NFRAMES = %d, Page Fault Count = %d, Backing Store Write Count = %d, Time = %d\n", policy[currpolicy], NFRAMES, pfc-pfcstart, 0, clktime-starttime);
+	kprintf("END  : POLICY = %s, NFRAMES = %d, NUMPAGES, = %d, Page Fault Count = %d, Time = %d\n", policy[currpolicy], NFRAMES, numPages, pfc-pfcstart, clktime-starttime);
 	kprintf("=============== END OF TEST 7 =============\n");
+}
+
+void test8(void){
+	kprintf("\n================== TEST 8 =================\n");
+	kprintf("Testing invalid memory access does not bring down the system \n");
+	uint32 numPages = 10;
+	pid32 p1 = vcreate(proc, INITSTK, numPages, INITPRIO, "proc1", 2, 1, numPages);  	
+	resume(p1);
+	char* badAddr = (char*)0x20000000;
+	pid32 p2 = vcreate(invalidMemAccess, INITSTK, numPages, INITPRIO, "proc1", 2, numPages, badAddr);  	
+	resume(p2);
+	kprintf("After resuming invalidMemAcess, creating one more process\n");
+	sleep(1);
+	pid32 p3 = vcreate(proc, INITSTK, numPages, INITPRIO, "proc1", 2, 1, numPages);  	
+	resume(p3);
+	sleep(3);
+	kprintf("=============== END OF TEST 8 =============\n");
+
+}
+void test9(void){
+	kprintf("\n=================== TEST 9 ================\n");
+	kprintf("Testing single process with odd results\n");
+	ASSERT(NFRAMES < 30);
+	kprintf("Creating normal process\n");
+	int numPages = 350; //For some reason, this does not work. Why? 
+	pid32 p1 = vcreate(proc, INITSTK, numPages, INITPRIO, "proc1", 2, 512, numPages);  	
+	resume(p1);
+	sleep(10);
+
+
+	kprintf("TEST PASS\n");
+	kprintf("=============== END OF TEST 6 =============\n");
+
+}
+
+void invalidMemAccess(uint32 numPages, char* a){
+	uint32* p = (uint32*)vgetmem(numPages*NBPG);
+	writemem(p, numPages, 1);
+	kprintf("invalid: pid %d after writes\n", currpid);
+	kprintf("invalid: pid %d touching bad memory at 0x%08x...\n", currpid, a);
+	*a = 0x000000EF; 
+	kprintf("invalid: pid %d after bad memory\n", currpid);
+	panic("invalidMemAccess not killed\n");
 }
 
 void looper(uint32 numPages, uint32 loops, sid32 s){
@@ -244,20 +298,20 @@ void looper(uint32 numPages, uint32 loops, sid32 s){
 		}
 	
 		// Rarely used memory
-		if(i%10 == 0){
+		if(i%23 == 0){
 			if(flags[2])
 				writemem(ptr[3], req, i);
 			else
-				readmem(ptr[3], req, i-10);
+				readmem(ptr[3], req, i-23);
 			flags[2] = !flags[2];
 		}
 
 		// Almost never used memory
-		if(i%100 == 0){
+		if(i%107 == 0){
 			if(flags[3])
 				writemem(ptr[4], req, i);
 			else
-				readmem(ptr[4], req, i-100);
+				readmem(ptr[4], req, i-107);
 			flags[3] = !flags[3];
 			kprintf("%d ", i/100);
 		}

@@ -45,10 +45,6 @@ readCR3:
 	movl %cr3, %eax
 	ret
 
-writeCR2:
-	movl 4(%esp), %eax
-	movl %eax, %cr2
-	
 	.data
 	.globl  pfErrCode
 	pfErrCode:

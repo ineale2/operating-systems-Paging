@@ -25,6 +25,10 @@
 #define	UM11		2
 #define SKIP_FRAME 	3
 
+/* GCA Status for mutual exclusion */
+#define LIMBO		-4
+#define AVAIL		0 
+
 /* Inverted page table data structure */
 
 typedef struct {
@@ -32,14 +36,14 @@ typedef struct {
 	uint32  prevFrame;		// Used when frame status is PAGE
 	int16	status;
 	pid32 	pid;
-	int32  vpn;
+	int32  	vpn;
 	uint32 	refCount; 		// When frame status is PTAB, this is the number of pages that are in memory
 } frame_t;
 
 frame_t ipt[NFRAMES];
 
 /* Sempahore (used as mutex) for GCA */
-sid32 gca_sem;
+sid32 pf_sem;
 
 //Head and tail of FIFO queue for frame replacement
 uint32 flistHead;

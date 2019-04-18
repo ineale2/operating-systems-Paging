@@ -66,7 +66,6 @@ typedef struct {
 
 #define MAX_ID		7		/* You get 8 mappings, 0 - 7 */
 #define MIN_ID		0
-
 #define DEV_MEM_PD_INDEX 		576
 #define NUM_GLOBAL_PT 			4
 #define METADATA_START 			0x00400000
