@@ -73,8 +73,7 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 	get_bs_info(currpid, a, &bsd, &offset);
 
 	// Copy the page in the backing store to the new frame
-	debug("calling read_bs: bsd = %d, offset = %d\n", (uint32)bsd, offset);
-	debug("read_bs: proc %d reading into fr = %d\n", currpid, fr);
+	debug("read:  pid = %d vpn = %04d fr = %d bsd = %d offset = %04d\n", currpid, vpn, fr, bsd, offset);
 	e = read_bs(faddr, bsd, offset);
 	debug("read_bs: proc %d done\n", currpid);
 	if(e == SYSERR){
@@ -90,7 +89,6 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 	debug("Mapping on Exit: va = 0x%08x maps to 0x%08x\n", a, vaddr2paddr(a, faddr));
 	hook_pfault(currpid, a, vpn, fr + FRAME0); 
 	debug("==========================================================\n\n\n");
-//	ipt[fr].gcaChosen = AVAIL;
 	debug("pfHandler: pid = %d releaseing the lock\n", currpid); 
 	signal(pf_sem);
 	restore(mask);
@@ -241,7 +239,7 @@ char* vaddr2paddr(char* vaddr, char* expected){
 	pt_t* pt;
 	uint32 pdi, pti;
 	uint32 offset;
-
+	
 	offset = vaddr2offset(vaddr); 
 	pdi = vaddr2pdi(vaddr);
 	pti = vaddr2pti(vaddr);
@@ -251,7 +249,7 @@ char* vaddr2paddr(char* vaddr, char* expected){
 	
 	if(expected != paddr){
 		debug("========= ERROR PADDR != EXPECTED  ===\n");
-		debug("vaddr: 0x%x paddr: 0x%x, expected 0x%x\n", vaddr, paddr, expected);
+		kprintf("vaddr: 0x%x paddr: 0x%x, expected 0x%x\n", vaddr, paddr, expected);
 		debug("pdi: %d, pti: %d, offset: %d\n", pdi, pti, offset);
 		debug("pt = 0x%x, pte = 0x%x\n", pt, (char*)(pt[pti].pt_base << 12));
 		debug("vaddr:\n");
@@ -260,7 +258,7 @@ char* vaddr2paddr(char* vaddr, char* expected){
 		printPDE(pd, pdi);
 		debug("pte:\n");
 		printPTE(pt, pti);
-		printPT(pt);
+		//printPT(pt);
 		dump32((long)pt[pti].pt_base << 12);
 		debug("========== END VADDR2PADDR =======\n\n\n");
 	}
@@ -364,15 +362,15 @@ void printPTE(pt_t* pt, uint32 pti){
 }
 
 void dumpframe(uint32 fr){
-	debug("\n================== DUMPING FRAME %d ==================\n", fr);
-	debug("\n");
+	kprintf("\n================== DUMPING FRAME %d ==================\n", fr);
+	kprintf("\n");
 	uint32* p = (uint32*)frameNum2ptr(fr);;
 	uint32* end =(uint32*) ((char*)p + NBPG);
 	while(p < end){
-		debug("0x%x:0x%x\n", p, *p);
+		kprintf("0x%x:0x%x\n", p, *p);
 		p = p + 1;	
 	}
-	debug("=================== END DUMP FRAME %d ================\n\n", fr);
+	kprintf("=================== END DUMP FRAME %d ================\n\n", fr);
 }
 
 int isInvalidAddr(char* a, pid32 pid){

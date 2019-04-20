@@ -8,7 +8,7 @@ void proc(uint32 inc, uint32 numPages);
 void manyMem(uint32 numPtrs, uint32 size);
 void stopper2(uint32 numPages);
 void stopper(uint32 numPages);
-void looper(uint32, uint32, sid32);
+void looper(uint32, uint32, sid32, int);
 void invalidMemAccess(uint32, char*);
 void test1(void);
 void test2(void);
@@ -19,16 +19,16 @@ void test6(void);
 void test7(void);
 void test8(void);
 void test9(void);
+void test10(void);
 //TODO: Use memory, free memory, use memory again (make sure state is consisient after). Do this for many proceses
 //TODO: Also in this test, verify number of page faults is what is expected
-//TODO: Test 6 will not pass with GCA or FIF . Try to see if a bsd has been improperly allocated (try printing bsd that the process is printing to, see how many are avaliable, what the state of this bsd is)
 //TODO: Need to quanity performance impact of FIFO vs GCA
 
 extern void page_policy_test(void);
 
 process	main(void)
 {
-  srpolicy(GCA);
+  srpolicy(FIFO);
 
   /* Start the network */
   /* DO NOT REMOVE OR COMMENT BELOW */
@@ -44,17 +44,19 @@ process	main(void)
   /* DO NOT REMOVE OR COMMENT THIS CALL */
   psinit();
 
-  page_policy_test();
+  //page_policy_test();
 
   	kprintf("TESTING START\n");
-	test1();
-	test2();
-	test4();
-	test5();
-	test6();
-	test7();
-	test8();
-	test9();
+//	test1();
+//	test2();
+//	test4();
+//	test5();
+//	test6();
+//	test7();
+//	test8();
+//	test9();
+	test10();
+//	test11();
 	//test3();
 	kprintf("END OF ALL TESTS\n");
   return OK;
@@ -212,7 +214,7 @@ void test7(void){
 	uint32 numLoops = 1000;
 	sid32 s = semcreate(0);
 	if(s == SYSERR) kprintf("FAIL: semcreate returned syserr\n");
-	pid32 p1 = vcreate(looper, INITSTK, numPages, INITPRIO, "proc1", 3, numPages, numLoops, s);  	
+	pid32 p1 = vcreate(looper, INITSTK, numPages, INITPRIO, "proc1", 4, numPages, numLoops, s, 0);  	
 	resume(p1);
 
 	if(SYSERR == wait(s))
@@ -254,6 +256,35 @@ void test9(void){
 
 }
 
+void test10(void){
+	kprintf("\n=================== TEST 10 ================\n");
+	kprintf("Testing two concurrent very long running processes\n");
+	char* policy[5] = {"blank","blank", "blank", "FIFO", "GCA "}; 
+	uint32 starttime = clktime;
+	int32 numPages = 16;
+	int32 numLoops = 25000;
+	uint32 pfcstart = pfc;
+	kprintf("START: POLICY = %s, NFRAMES = %d, NUMPAGES, = %d, Page Fault Count = %d, Time = %d\n", policy[currpolicy], NFRAMES, numPages, pfc-pfcstart, clktime-starttime);
+	ASSERT(NFRAMES < 30);
+
+	sid32 s = semcreate(0);
+	if(s == SYSERR) kprintf("FAIL: semcreate returned syserr\n");
+	pid32 p1 = vcreate(looper, INITSTK, numPages, INITPRIO, "proc1", 4, numPages, numLoops, s, 1);  	
+	resume(p1);
+	pid32 p2 = vcreate(looper, INITSTK, numPages, INITPRIO, "proc1", 4, numPages, numLoops, -1, 1);  	
+	resume(p2);
+
+	if(SYSERR == wait(s))
+		kprintf("FAIL: wait failed on sid %d\n", s);
+
+
+	kprintf("TEST PASS\n");
+	kprintf("END  : POLICY = %s, NFRAMES = %d, NUMPAGES, = %d, Page Fault Count = %d, Time = %d\n", policy[currpolicy], NFRAMES, numPages, pfc-pfcstart, clktime-starttime);
+	kprintf("=============== END OF TEST 10 =============\n");
+
+}
+
+
 void invalidMemAccess(uint32 numPages, char* a){
 	uint32* p = (uint32*)vgetmem(numPages*NBPG);
 	writemem(p, numPages, 1);
@@ -264,15 +295,17 @@ void invalidMemAccess(uint32 numPages, char* a){
 	panic("invalidMemAccess not killed\n");
 }
 
-void looper(uint32 numPages, uint32 loops, sid32 s){
+void looper(uint32 numPages, uint32 loops, sid32 s, int mulPrFlg){
 	int i;
 	int req = numPages/numRegions;
 	uint32* ptr[numRegions];
 	for( i = 0; i < numRegions; i++){
 		ptr[i] = (uint32*)vgetmem(req*NBPG);
+		kprintf("%d:0x%08x ", currpid, ptr[i]);
 		if(ptr[i] == (uint32*)SYSERR)
 			panic("FAIL: looper vgetmem call failed\n");
 	}
+	kprintf("\n");
 	//Alternate between reading and writing memory
 	char flags[numRegions] = {1,1,1,1};
 	kprintf("Looper start: ");
@@ -280,37 +313,38 @@ void looper(uint32 numPages, uint32 loops, sid32 s){
 		//kprintf("Loop %d\n", i);
 		//Frequently used memory
 		if(flags[0]) 
-			writemem(ptr[1], req, i);
+			writemem(ptr[0], req, i);
 		else 
-			readmem(ptr[1], req, i-1);
+			readmem(ptr[0], req, i-1);
 		flags[0] = !flags[0];
 
 		//Less frequently used memory
 		if(i%5 == 0){
 			if(flags[1]) 
-				writemem(ptr[2], req, i);
+				writemem(ptr[1], req, i);
 			else
-				readmem(ptr[2], req, i-5);
+				readmem(ptr[1], req, i-5);
 			flags[1] = !flags[1];
 		}
 	
 		// Rarely used memory
 		if(i%23 == 0){
 			if(flags[2])
-				writemem(ptr[3], req, i);
+				writemem(ptr[2], req, i);
 			else
-				readmem(ptr[3], req, i-23);
+				readmem(ptr[2], req, i-23);
 			flags[2] = !flags[2];
 		}
 
 		// Almost never used memory
 		if(i%107 == 0){
 			if(flags[3])
-				writemem(ptr[4], req, i);
+				writemem(ptr[3], req, i);
 			else
-				readmem(ptr[4], req, i-107);
+				readmem(ptr[3], req, i-107);
 			flags[3] = !flags[3];
 			kprintf("%d ", i/100);
+			if(i%(10*107) == 0) kprintf("\n");
 		}
 		
 		
@@ -326,13 +360,18 @@ void looper(uint32 numPages, uint32 loops, sid32 s){
 } 
 
 void readmem(uint32* p, uint32 numPages, uint32 count){
-//	kprintf("readmem:  p = 0x%08x\n", p);
+	//kprintf("readmem %d:  p = 0x%08x count = %d\n", currpid, p, count);
 	int i;
 	uint32 val;
+	uint32 mem;
 	for(i = 0; i < numPages*NBPG; i+=4){
 		val = get_test_value3(p, count);
-		if(val != *p){
-			kprintf("Addr: 0x%08x, data: 0x%08x, expected: 0x%08x\n", p, *p, val);
+		mem = *p;
+		if(val != mem){
+			kprintf("Addr: 0x%08x, data: 0x%08x, expected: 0x%08x, second read = 0x%08x, loop = %d pid = %d\n", p, mem, val, *p, count, currpid);
+			char* faddr = vaddr2paddr((char*)((uint32)p & 0xFFFFF000), (char*)0);	
+			kprintf("Next 3 expected values: 0x%08x, 0x%08x, 0x%08x\n", get_test_value3(p + 1, count), get_test_value3(p + 2, count), get_test_value3(p + 3, count));
+			dumpframe(faddr2frameNum(faddr));	
 			panic("FAIL: Checking memory failed\n");
 		}
 		p++;
@@ -340,7 +379,7 @@ void readmem(uint32* p, uint32 numPages, uint32 count){
 }
 
 void writemem(uint32* p, uint32 numPages, uint32 count){
-//	kprintf("writemem: p = 0x%08x\n", p);
+	//kprintf("writemem %d: p = 0x%08x count = %d\n", currpid, p, count);
 	int i;
 	for(i = 0; i < numPages*NBPG; i+=4){
 		*p= get_test_value3(p, count);
@@ -515,7 +554,8 @@ uint32 get_test_value2(uint32 *addr) {
 }
 
 uint32 get_test_value3(uint32 *addr, uint32 seed) {
-  static uint32 v1 = 0x12345678;
-  static uint32 v2 = 0xdeadbeef;
-  return (uint32)addr*seed + v1*currpid + ((uint32)addr * v2);
+  //static uint32 v1 = 0x12345678;
+//  static uint32 v2 = 0xdeadbeef;
+  return (uint32)((uint32)addr & 0x0000FFFF) + (seed << 20) + (currpid << 16);
+  //return (uint32)addr*seed + v1*currpid + ((uint32)addr * v2);
 }

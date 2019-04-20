@@ -57,12 +57,20 @@ void freeFrameGCA(uint32 fr){
 }
 
 char* getNewFrame(uint32 type, pid32 pid, int32 vpn){
-	if(currpolicy == FIFO)
-		return getNewFrameFIFO(type, pid, vpn);
-	else if(currpolicy == GCA)
-		return getNewFrameGCA(type, pid, vpn);
-	else
-		return (char*)SYSERR;
+	intmask mask;
+	mask = disable();	 
+	char* fr;
+	if(currpolicy == FIFO){
+		fr = getNewFrameFIFO(type, pid, vpn);
+	}
+	else if(currpolicy == GCA){
+		fr = getNewFrameGCA(type, pid, vpn);
+	}
+	else{
+		fr = (char*)SYSERR;
+	}
+	restore(mask);
+	return fr;
 }
 
 char* getNewFrameGCA(uint32 type, pid32 pid, int32 vpn){
@@ -173,6 +181,8 @@ uint32 getAndSetUM(uint32 fr){
 char* getNewFrameFIFO(uint32 type, pid32 pid, int32 vpn){
 	uint32 fr;
 	uint32 i;
+	intmask mask;
+	mask = disable();
 	static uint32 nextframe = 0;
 	
 
@@ -185,6 +195,7 @@ char* getNewFrameFIFO(uint32 type, pid32 pid, int32 vpn){
 			// Mark the frame as used
 			init_frame(fr, type, pid, vpn);
 			debug("getNewFrameFIFO: no eviction, free frame fr = %d\n", fr);
+			restore(mask);
 			return frameNum2ptr(fr);
 		}
 		else{
@@ -195,6 +206,7 @@ char* getNewFrameFIFO(uint32 type, pid32 pid, int32 vpn){
 	fr = pickFrame(); 
 	if(fr == (uint32)SYSERR){
 		//No frame avaliable. 
+		restore(mask);
 		return (char*)SYSERR;
 	}
 
@@ -205,6 +217,7 @@ char* getNewFrameFIFO(uint32 type, pid32 pid, int32 vpn){
 	init_frame(fr, type, pid, vpn);
 	
 	// Return a pointer to the new frame
+	restore(mask);
 	return frameNum2ptr(fr);
 }
 
@@ -293,7 +306,7 @@ void evictFrame(uint32 fr){
 			kill(currpid);
 		}
 		// Store changes in backing store
-		debug("writeBS: proc %d writing fr = %d beloning to pid = %d to backing store\n", currpid, fr, pid); 
+		debug("write: pid = %d vpn = %04d fr = %d bsd = %d offset = %04d\n", currpid, vp, fr, bsd, offset);
 		s = write_bs(faddr, bsd, offset);
 		debug("writeBS: proc %d done\n", currpid);
 		debug("after write_bs\n");
