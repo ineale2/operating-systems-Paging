@@ -10,6 +10,7 @@ void stopper2(uint32 numPages);
 void stopper(uint32 numPages);
 void looper(uint32, uint32, sid32, int);
 void invalidMemAccess(uint32, char*);
+void gcaTest(uint32, sid32);
 void test1(void);
 void test2(void);
 void test3(void);
@@ -20,6 +21,7 @@ void test7(void);
 void test8(void);
 void test9(void);
 void test10(void);
+void test11(void);
 //TODO: Use memory, free memory, use memory again (make sure state is consisient after). Do this for many proceses
 //TODO: Also in this test, verify number of page faults is what is expected
 //TODO: Need to quanity performance impact of FIFO vs GCA
@@ -28,7 +30,7 @@ extern void page_policy_test(void);
 
 process	main(void)
 {
-  srpolicy(FIFO);
+  srpolicy(GCA);
 
   /* Start the network */
   /* DO NOT REMOVE OR COMMENT BELOW */
@@ -55,8 +57,8 @@ process	main(void)
 //	test7();
 //	test8();
 //	test9();
-	test10();
-//	test11();
+//	test10();
+	test11();
 	//test3();
 	kprintf("END OF ALL TESTS\n");
   return OK;
@@ -284,6 +286,71 @@ void test10(void){
 
 }
 
+void test11(void){
+	kprintf("\n=================== TEST 11 ================\n");
+	kprintf("Testing GCA policy\n");
+	int32 numPages = 21;
+	ASSERT(NFRAMES == 28);
+	ASSERT(currpolicy == GCA);
+
+	sid32 s = semcreate(0);
+	if(s == SYSERR) kprintf("FAIL: semcreate returned syserr\n");
+	pid32 p1 = vcreate(gcaTest, INITSTK, numPages, INITPRIO, "proc1", 2, numPages, s);  	
+	resume(p1);
+
+	if(SYSERR == wait(s))
+		kprintf("FAIL: wait failed on sid %d\n", s);
+
+
+	kprintf("TEST PASS\n");
+	kprintf("=============== END OF TEST 11 =============\n");
+}
+
+void gcaTest(uint32 numPages, sid32 s){
+	kprintf("Calling vgetmem\n");
+	char* start = vgetmem(numPages*NBPG);
+	kprintf("After vgetmem\n");
+	char* p = start;
+	//Read or write to every page except the last one
+	int i;
+	int val;
+	for(i = 0; i<numPages-1; i++){
+		if(i == 1){
+			kprintf("Read  page %02d: ", i);
+			val = *p;
+			val++; //avoid compile warning
+		}
+		else{
+			kprintf("Write page %02d: ", i);
+			if(i == 0) kprintf("\n");
+			*p = 'd';
+		}
+		p += NBPG;
+	}
+	//Now cause a fault that will cause eviction, should evict page 1
+	kprintf("\nBefore fault that should cause first eviction\n");
+	kprintf("Test passes if page 1 (4097) is evicted\n");
+	*p = 'd';
+	kprintf("After fault that should have casued eviction\n");
+	p = start;	
+	//Now write from all pages but one	
+	for(i = 0; i<numPages; i++){
+		if(i == 10 || i == 1){
+			kprintf("Skipping page %02d\n", i);
+		}
+		else{
+			kprintf("Write page %02d: \n", i);
+			*p = 'f';
+		}
+		p += NBPG;
+	}
+	//Now write to page 1, causing an eviction. Frame 10 should be evicted
+	kprintf("Test passes if page 10 (4106) is evicted\n");
+	p = start + NBPG;
+	*p = 'd';
+
+	if(SYSERR == signal(s)) kprintf("TEST FAIL: Signal failed\n");
+}
 
 void invalidMemAccess(uint32 numPages, char* a){
 	uint32* p = (uint32*)vgetmem(numPages*NBPG);

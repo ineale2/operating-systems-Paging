@@ -80,13 +80,6 @@ char* getNewFrameGCA(uint32 type, pid32 pid, int32 vpn){
 	static uint32 nextframe = 0;
 	//Loop over every frame, at most twice, and inspect the bits and state of the frame
 	//NOTE: Can loop 3 times because of global frames. Could start on a global frame
-	//TODO: Consider making this a while loop. Also, test1 is freezing.
-	//Wait on gca_sem to make sure no one else is in the critical section 
-	//This is to prevent the unfortunate bugs related to read_bs and write_bs, which are blocking calls
-	//There exists a condition where multiple processes believe the same frame is avaliable for writing
-	//debug("gca_sem: pid %d wait\n", currpid);
-	//wait(gca_sem);
-//	debug("gca_sem: pid %d has the lock\n", currpid);
 	for(i = 0; i <= 3*NFRAMES; i++){
 		nextframe %= NFRAMES;
 //		debug("getNewFrameGCA: Loop: i = %d, nextframe = %d\n", i, nextframe); 
@@ -94,10 +87,8 @@ char* getNewFrameGCA(uint32 type, pid32 pid, int32 vpn){
 		
 		if(ipt[nextframe].status == NOT_USED){
 			fr = nextframe++;
-			debug("getNewFrameGCA: no eviction, free frame fr = %d\n", fr);
+			kprintf("getNewFrameGCA: no eviction, free frame fr = %d for vpn = %d\n", fr, vpn);
 			init_frame(fr, type, pid, vpn);
-//			debug("gca_sem: pid %d releasing lock\n", currpid);
-	//		signal(gca_sem);
 			return frameNum2ptr(fr);
 		}
 		else if(ipt[nextframe].status == PAGE){
@@ -111,7 +102,7 @@ char* getNewFrameGCA(uint32 type, pid32 pid, int32 vpn){
 		nextframe++;
 		
 	}
-	debug("getNewFrameGCA: no free frame... evicting fr = %d\n", fr);
+	kprintf("getNewFrameGCA: no free frame... evicting fr = %d used for vpn = %d\n", fr, ipt[fr].vpn);
 	/* No frames are free, fr chosen for eviction */
 	// Evict the frame
 	evictFrame(fr);
@@ -154,6 +145,7 @@ uint32 getAndSetUM(uint32 fr){
 	//Modify bit: pt_dirty
 	char use = pt[pti].pt_acc;
 	char mod = (pt[pti].pt_dirty && !pt[pti].pt_avail);
+	kprintf("getAndSetUM: vpn = %02d, use = %d mod = %d, fr = %02d\n", vp-VPN0, use, mod, fr);
 	if(use && mod){
 		//NOTE: GCA algorithm says to swap dirty bit, but that would cause evictFrame to fail to write it to memory if chosengt
 		//NOTE: Instead, set availiable bit and modify algorithm to swap based on that bit 

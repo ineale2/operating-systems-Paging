@@ -17,6 +17,7 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 	intmask mask;			// Stored interrupt mask
 
 	mask = disable();
+	// Increment page fault counter for instrumentation
 	pfc++;
 	a = (char*)readCR2();
 	wait(pf_sem);
@@ -26,11 +27,7 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 	if(a != (char*)readCR2()) panic("CR2 changed!\n");
 	printErrCode(pfErrCode);	
 	debug("PID = %d\n", currpid);
-	// Increment page fault counter for instrumentation
 
-	//TODO: 1) Bound critical section. Test GCA vs. FIFO. See if you can replace sempahore with a property in IPT that says if this has been chosen
-	//TODO: This could cause the frame to be passed over, will be set when chosen, and cleared when written
-	//TODO: 3) Write test cases for correct number of page faults. Write test cases for getmem/free/getmem with random values. 
 	//Get the faulted address
 	pd = proctab[currpid].pd;
 
