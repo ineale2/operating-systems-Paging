@@ -46,20 +46,21 @@ process	main(void)
   /* DO NOT REMOVE OR COMMENT THIS CALL */
   psinit();
 
-  //page_policy_test();
+ //	page_policy_test();
 
   	kprintf("TESTING START\n");
 //	test1();
 //	test2();
-//	test4();
-//	test5();
+///	test4();
+///	test5();
 //	test6();
-	test7_wrapper();
+//	test7(24);
+	//test7_wrapper();
 //	test8();
 //	test9();
 //	test10();
 //	test11();
-	//test3();
+	test3();
 	kprintf("END OF ALL TESTS\n");
   return OK;
 }
@@ -376,16 +377,13 @@ void looper(uint32 numPages, uint32 loops, sid32 s, int mulPrFlg){
 	uint32* ptr[numRegions];
 	for( i = 0; i < numRegions; i++){
 		ptr[i] = (uint32*)vgetmem(req*NBPG);
-	//	kprintf("%d:0x%08x ", currpid, ptr[i]);
 		if(ptr[i] == (uint32*)SYSERR)
 			panic("FAIL: looper vgetmem call failed\n");
 	}
-	kprintf("\n");
 	//Alternate between reading and writing memory
 	char flags[numRegions] = {1,1,1,1};
 	kprintf("Looper start: ");
 	for( i = 0; i < loops; i++){
-		//kprintf("Loop %d\n", i);
 		//Frequently used memory
 		if(flags[0]) 
 			writemem(ptr[0], req, i);
