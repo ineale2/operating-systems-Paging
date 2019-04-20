@@ -21,12 +21,6 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 	pfc++;
 	a = (char*)readCR2();
 	wait(pf_sem);
-	debug("================= PAGE FAULT HANDLER =====================\n");
-	debug("pfHandler: pid = %d has the lock\n", currpid); 
-	debug("PFC: %04d CR2: 0x%x\n", pfc, readCR2());
-	if(a != (char*)readCR2()) panic("CR2 changed!\n");
-	printErrCode(pfErrCode);	
-	debug("PID = %d\n", currpid);
 
 	//Get the faulted address
 	pd = proctab[currpid].pd;
@@ -52,7 +46,6 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 
 	// Case 1: Check if page table is not present
 	if(pd[pdi].pd_pres == 0){
-		debug("page table not present!\n");
 		//Allocate a new page table at set the page directory entry
 		pt = newPageTable(currpid);
 
@@ -66,13 +59,10 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 	fr = faddr2frameNum(faddr);
 
 	// Using the backing store map, find the store s and page offset o which correspond to pti
-	debug("bs_info for READ\n");
 	get_bs_info(currpid, a, &bsd, &offset);
 
 	// Copy the page in the backing store to the new frame
-	debug("read:  pid = %d vpn = %04d fr = %d bsd = %d offset = %04d\n", currpid, vpn, fr, bsd, offset);
 	e = read_bs(faddr, bsd, offset);
-	debug("read_bs: proc %d done\n", currpid);
 	if(e == SYSERR){
 		panic("read_bs failed\n");
 	}
@@ -83,10 +73,9 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 	pt[pti].pt_pres = 1;
 	set_PTE_addr(&pt[pti], faddr);
 
-	debug("Mapping on Exit: va = 0x%08x maps to 0x%08x\n", a, vaddr2paddr(a, faddr));
 	hook_pfault(currpid, a, vpn, fr + FRAME0); 
-	debug("==========================================================\n\n\n");
-	debug("pfHandler: pid = %d releaseing the lock\n", currpid); 
+
+	// Release lock
 	signal(pf_sem);
 	restore(mask);
 }
@@ -96,13 +85,11 @@ void init_gpt(){
 	int j;
 	for( j = 0; j < NUM_GLOBAL_PT; j++){
 		gpt[j] = getNewFrame(PTAB, GLOBAL, NO_VPN);
-		debug("gpt[%d] = 0x%x\n", j, gpt[j]);
 		//Allocate some space for a pt
 		setup_id_paging((pt_t*)gpt[j], (char*)(j << 22));
 	}
 	// Initialize device page tables (starting at 0x9000000, 1024 pages)
 	dpt = getNewFrame(PTAB, GLOBAL, NO_VPN);
-	debug("dpt = 0x%x\n", dpt);
 	setup_id_paging((pt_t*)dpt, (char*)DEV_MEM_START);
 }
 
@@ -154,19 +141,13 @@ pt_t* newPageTable(pid32 pid){
 }
 
 status init_pd(pid32 pid){
-	debug("start of init pd pid = %d\n", currpid);
 	wait(pf_sem);
-	debug("init_pd: pid %d has the lock\n", currpid);
 	pd_t* pd = (pd_t*)getNewFrame(PDIR, pid, NO_VPN);
-	debug("init_pd: pid %d releasing the lock\n", currpid);
 	signal(pf_sem);
 	if(pd == (pd_t*)SYSERR){
-		debug("bad ret bal\n");
 		return SYSERR;
 	}
-	debug("after get new frame pd\n");
 	pd_t* pd_ptr;
-	debug("init_pd: pid = %d\ninit_pd: pd start %x\n", pid, (void*)pd);
 	int  j;
 	// Put location of page directory into proctab
 	proctab[pid].pd = pd;
@@ -198,7 +179,6 @@ status init_pd(pid32 pid){
 	pd[DEV_MEM_PD_INDEX].pd_write 		= 1;
 	pd[DEV_MEM_PD_INDEX].pd_pres 		= 1;
 	pd[DEV_MEM_PD_INDEX].pd_global 		= 1;
-	debug("init_pd: pd end  %x\n\n", (void*)&pd[PAGEDIRSIZE]);
 
 	return OK;
 
@@ -373,9 +353,7 @@ void dumpframe(uint32 fr){
 int isInvalidAddr(char* a, pid32 pid){
 	struct procent* prptr = &proctab[pid];
 	char* vheapEnd = (char*)VHEAP_START + NBPG*prptr->hsize;
-	//debug("isInvalidAddr: addr = 0x%x, vheapEnd = 0x%x, hsize = %d\n", a, vheapEnd, prptr->hsize);
 	return a >= vheapEnd;
-	//|| (a >= (char*)DEV_MEM_START && a < (char*)DEV_MEM_END)
 }
 
 void printErrCode(uint32 e){
