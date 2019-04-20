@@ -30,7 +30,7 @@ extern void page_policy_test(void);
 
 process	main(void)
 {
-  srpolicy(GCA);
+  srpolicy(FIFO);
 
   /* Start the network */
   /* DO NOT REMOVE OR COMMENT BELOW */
