@@ -21,6 +21,7 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 	a = (char*)readCR2();
 	wait(pf_sem);
 	debug("================= PAGE FAULT HANDLER =====================\n");
+	debug("pfHandler: pid = %d has the lock\n", currpid); 
 	debug("PFC: %04d CR2: 0x%x\n", pfc, readCR2());
 	if(a != (char*)readCR2()) panic("CR2 changed!\n");
 	printErrCode(pfErrCode);	
@@ -37,8 +38,8 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 	if(isInvalidAddr(a, currpid)){
 		kprintf("Address 0x%x invalid for pid = %d\n", a, currpid);
 		restore(mask);
-		kill(currpid);
 		signal(pf_sem);
+		kill(currpid);
 		return; //Will never execute
 	}
 
@@ -90,6 +91,7 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 	hook_pfault(currpid, a, vpn, fr + FRAME0); 
 	debug("==========================================================\n\n\n");
 //	ipt[fr].gcaChosen = AVAIL;
+	debug("pfHandler: pid = %d releaseing the lock\n", currpid); 
 	signal(pf_sem);
 	restore(mask);
 }
@@ -157,13 +159,17 @@ pt_t* newPageTable(pid32 pid){
 }
 
 status init_pd(pid32 pid){
-	debug("start of init pd\n");
+	debug("start of init pd pid = %d\n", currpid);
+	wait(pf_sem);
+	debug("init_pd: pid %d has the lock\n", currpid);
 	pd_t* pd = (pd_t*)getNewFrame(PDIR, pid, NO_VPN);
+	debug("init_pd: pid %d releasing the lock\n", currpid);
+	signal(pf_sem);
 	if(pd == (pd_t*)SYSERR){
 		debug("bad ret bal\n");
 		return SYSERR;
 	}
-	debug("after net new frame pd\n");
+	debug("after get new frame pd\n");
 	pd_t* pd_ptr;
 	debug("init_pd: pid = %d\ninit_pd: pd start %x\n", pid, (void*)pd);
 	int  j;
@@ -197,7 +203,7 @@ status init_pd(pid32 pid){
 	pd[DEV_MEM_PD_INDEX].pd_write 		= 1;
 	pd[DEV_MEM_PD_INDEX].pd_pres 		= 1;
 	pd[DEV_MEM_PD_INDEX].pd_global 		= 1;
-	debug("init_pd: pd end  %x\n", (void*)&pd[PAGEDIRSIZE]);
+	debug("init_pd: pd end  %x\n\n", (void*)&pd[PAGEDIRSIZE]);
 
 	return OK;
 

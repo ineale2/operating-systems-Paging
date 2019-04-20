@@ -230,6 +230,9 @@ static void initialize_paging()
 	// Initialize pd for null process
 	init_pd(NULLPROC);
 
+	// Set the null processes PD to be the global page directory
+	gpd = proctab[NULLPROC].pd;
+
 	// Install the page fault interrupt service routine
 	set_evec(PF_INTERRUPT_NUM, (uint32)pf_dispatcher);
 

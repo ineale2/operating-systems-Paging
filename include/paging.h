@@ -85,6 +85,9 @@ uint32 pfc;
 /* Number of backing store mappings still avaliable */
 uint32 free_bs_count;
 
+/*Global page directory for non-virtual heap processes */
+pd_t* gpd;
+
 /* 4 global page tables */
 char* gpt[NUM_GLOBAL_PT];
 /* Global device page table */

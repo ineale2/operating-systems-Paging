@@ -28,8 +28,7 @@ extern void page_policy_test(void);
 
 process	main(void)
 {
-  srpolicy(FIFO);
-	kprintf("after sr policy\n");
+  srpolicy(GCA);
 
   /* Start the network */
   /* DO NOT REMOVE OR COMMENT BELOW */
@@ -45,19 +44,18 @@ process	main(void)
   /* DO NOT REMOVE OR COMMENT THIS CALL */
   psinit();
 
-  //page_policy_test();
+  page_policy_test();
 
   	kprintf("TESTING START\n");
-//	test1();
-///	test2();
-//	test4();
-//	test5();
-	//TODO: Figure out why test6 cannot pass if sleep(10) is in there. rdsbufalloc panics, but doesnt always show the message
+	test1();
+	test2();
+	test4();
+	test5();
 	test6();
-//	test7();
-//	test8();
-//	test3();
-//	test9();
+	test7();
+	test8();
+	test9();
+	//test3();
 	kprintf("END OF ALL TESTS\n");
   return OK;
 }
@@ -177,18 +175,18 @@ void test6(void){
 	//numPages = 40;
 	pid32 p1 = vcreate(proc, INITSTK, numPages, INITPRIO, "proc1", 2, 512, numPages);  	
 	resume(p1);
-	sleep(10);
+	sleep(20);
 
 	kprintf("\nProcess %d should have finished by now\n", p1);
 	// Now create so many processes that there are not enough frames for PDIR
 	//kprintf("Now calling create()\n");
-	kprintf("Calling create... init_pd should fail\n");
+	kprintf("Calling create for many processes\n");
+	
 	for(i = 0; i < NFRAMES; i++){
-		//kprintf("%d ", i);
-		pid[i] = create(stopper2, INITSTK/16, INITPRIO, "proc1", 1, -1); 
+		kprintf("%d ", i);
+		pid[i] = create(stopper2, INITSTK/16, INITPRIO, "proc1", 1, 1); 
 		if(pid[i] == (pid32)SYSERR){
-			kprintf("\nTEST PASS: No space for PDIR\n");
-			break;
+			kprintf("\nTEST FAIL: could not create many processes\n");
 		}
 	}
 	int j;
@@ -197,9 +195,8 @@ void test6(void){
 			kprintf("\nTEST FAIL, culd not kill pid %d\n", pid[j]);
 		}
 	}
-	if(i == NFRAMES) kprintf("TEST FAIL: All create() calls suceeded\n");
 
-
+	
 	kprintf("=============== END OF TEST 6 =============\n");
 
 }
@@ -249,11 +246,11 @@ void test9(void){
 	int numPages = 350; //For some reason, this does not work. Why? 
 	pid32 p1 = vcreate(proc, INITSTK, numPages, INITPRIO, "proc1", 2, 512, numPages);  	
 	resume(p1);
-	sleep(10);
+	sleep(20);
 
 
 	kprintf("TEST PASS\n");
-	kprintf("=============== END OF TEST 6 =============\n");
+	kprintf("=============== END OF TEST 9 =============\n");
 
 }
 
