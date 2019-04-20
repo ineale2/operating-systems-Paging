@@ -87,7 +87,7 @@ char* getNewFrameGCA(uint32 type, pid32 pid, int32 vpn){
 		
 		if(ipt[nextframe].status == NOT_USED){
 			fr = nextframe++;
-			kprintf("getNewFrameGCA: no eviction, free frame fr = %d for vpn = %d\n", fr, vpn);
+			debug("getNewFrameGCA: no eviction, free frame fr = %d for vpn = %d\n", fr, vpn);
 			init_frame(fr, type, pid, vpn);
 			return frameNum2ptr(fr);
 		}
@@ -102,7 +102,7 @@ char* getNewFrameGCA(uint32 type, pid32 pid, int32 vpn){
 		nextframe++;
 		
 	}
-	kprintf("getNewFrameGCA: no free frame... evicting fr = %d used for vpn = %d\n", fr, ipt[fr].vpn);
+	debug("getNewFrameGCA: no free frame... evicting fr = %d used for vpn = %d\n", fr, ipt[fr].vpn);
 	/* No frames are free, fr chosen for eviction */
 	// Evict the frame
 	evictFrame(fr);
@@ -144,23 +144,20 @@ uint32 getAndSetUM(uint32 fr){
 	//Use bit: pt_acc
 	//Modify bit: pt_dirty
 	char use = pt[pti].pt_acc;
-	char mod = (pt[pti].pt_dirty && !pt[pti].pt_avail);
-	kprintf("getAndSetUM: vpn = %02d, use = %d mod = %d, fr = %02d\n", vp-VPN0, use, mod, fr);
+	char mod = pt[pti].pt_dirty;
+	debug("getAndSetUM: vpn = %02d, use = %d mod = %d, fr = %02d\n", vp-VPN0, use, mod, fr);
 	if(use && mod){
-		//NOTE: GCA algorithm says to swap dirty bit, but that would cause evictFrame to fail to write it to memory if chosengt
-		//NOTE: Instead, set availiable bit and modify algorithm to swap based on that bit 
+		//Flip dirty bit, but keep a record of this in available bits
+		pt[pti].pt_dirty = 0;
 		pt[pti].pt_avail = 1;
-//		debug("getAndSetUM: vp = %d, pid = %d, a = 0x%08x, pdi = %d, pti = %d, use(1) = %d, mod(1) = %d \n", vp, pid, a, pdi, pti, use, mod);
 		return UM11;
 	}
 	else if(use && !mod){
 		//Flip use bit
-//		debug("getAndSetUM: vp = %d, pid = %d, a = 0x%08x, pdi = %d, pti = %d, use(1) = %d, mod(0) = %d \n", vp, pid, a, pdi, pti, use, mod);
 		pt[pti].pt_acc = 0;
 		return UM10;
 	}
 	else if(!use && !mod){
-//		debug("getAndSetUM: vp = %d, pid = %d, a = 0x%08x, pdi = %d, pti = %d, use(0) = %d, mod(0) = %d \n", vp, pid, a, pdi, pti, use, mod);
 		return UM00;
 	}
 	else{
@@ -288,7 +285,8 @@ void evictFrame(uint32 fr){
 	decRefCount(pt, pd, pdi);
 
 	// Write page out to disk if necessary
-	if(pt[pti].pt_dirty == 1){
+	//Note: pt_avail is used during GCA to keep account for flipping a dirty bit
+	if(pt[pti].pt_dirty == 1 || pt[pti].pt_avail == 1){
 		debug("evictFrame: writing dirty page\n");
 		faddr = frameNum2ptr(fr);	
 		debug("bs_info for WRITE\n");

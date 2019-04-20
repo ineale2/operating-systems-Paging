@@ -17,14 +17,14 @@ void test3(void);
 void test4(void);
 void test5(void);
 void test6(void);
-void test7(void);
+void test7(uint32 numPages);
+void test7_wrapper(void);
 void test8(void);
 void test9(void);
 void test10(void);
 void test11(void);
 //TODO: Use memory, free memory, use memory again (make sure state is consisient after). Do this for many proceses
 //TODO: Also in this test, verify number of page faults is what is expected
-//TODO: Need to quanity performance impact of FIFO vs GCA
 
 extern void page_policy_test(void);
 
@@ -54,11 +54,11 @@ process	main(void)
 //	test4();
 //	test5();
 //	test6();
-//	test7();
+	test7_wrapper();
 //	test8();
 //	test9();
 //	test10();
-	test11();
+//	test11();
 	//test3();
 	kprintf("END OF ALL TESTS\n");
   return OK;
@@ -205,12 +205,11 @@ void test6(void){
 
 }
 
-void test7(void){
+void test7(uint32 numPages){
 	kprintf("\n================== TEST 7 === =============\n");
 	char* policy[5] = {"blank","blank", "blank", "FIFO", "GCA "}; 
 	uint32 starttime = clktime;
 	uint32 pfcstart = pfc;
-	uint32 numPages = 24;
 	kprintf("START: POLICY = %s, NFRAMES = %d, NUMPAGES, = %d, Page Fault Count = %d, Time = %d\n", policy[currpolicy], NFRAMES, numPages, pfc-pfcstart, clktime-starttime);
 	//Create many processes
 	uint32 numLoops = 1000;
@@ -223,6 +222,14 @@ void test7(void){
 		kprintf("FAIL: wait failed on sid %d\n", s);
 	kprintf("END  : POLICY = %s, NFRAMES = %d, NUMPAGES, = %d, Page Fault Count = %d, Time = %d\n", policy[currpolicy], NFRAMES, numPages, pfc-pfcstart, clktime-starttime);
 	kprintf("=============== END OF TEST 7 =============\n");
+}
+
+void test7_wrapper(void){
+	int i;
+	for( i = 10; i <= 90; i+=4){
+		test7(i);
+	}  
+
 }
 
 void test8(void){
@@ -289,6 +296,7 @@ void test10(void){
 void test11(void){
 	kprintf("\n=================== TEST 11 ================\n");
 	kprintf("Testing GCA policy\n");
+	kprintf("Note: Need to turn two debug statements to kprintf in getNewFrameGCA to see which frame is chosen\n");
 	int32 numPages = 21;
 	ASSERT(NFRAMES == 28);
 	ASSERT(currpolicy == GCA);
@@ -368,7 +376,7 @@ void looper(uint32 numPages, uint32 loops, sid32 s, int mulPrFlg){
 	uint32* ptr[numRegions];
 	for( i = 0; i < numRegions; i++){
 		ptr[i] = (uint32*)vgetmem(req*NBPG);
-		kprintf("%d:0x%08x ", currpid, ptr[i]);
+	//	kprintf("%d:0x%08x ", currpid, ptr[i]);
 		if(ptr[i] == (uint32*)SYSERR)
 			panic("FAIL: looper vgetmem call failed\n");
 	}
