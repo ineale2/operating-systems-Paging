@@ -11,6 +11,7 @@ void stopper(uint32 numPages);
 void looper(uint32, uint32, sid32, int);
 void invalidMemAccess(uint32, char*);
 void gcaTest(uint32, sid32);
+void allocator(uint32 numPages, sid32 s);
 void test1(void);
 void test2(void);
 void test3(void);
@@ -23,6 +24,7 @@ void test8(void);
 void test9(void);
 void test10(void);
 void test11(void);
+void test12(void);
 //TODO: Use memory, free memory, use memory again (make sure state is consisient after). Do this for many proceses
 //TODO: Also in this test, verify number of page faults is what is expected
 
@@ -51,16 +53,17 @@ process	main(void)
   	kprintf("TESTING START\n");
 //	test1();
 //	test2();
-///	test4();
-///	test5();
-//	test6();
+//	test4();
+//	test5();
+///	test6();
 //	test7(24);
 	//test7_wrapper();
 //	test8();
 //	test9();
-//	test10();
+	test12();
+	test10();
 //	test11();
-	test3();
+//	test3();
 	kprintf("END OF ALL TESTS\n");
   return OK;
 }
@@ -271,7 +274,7 @@ void test10(void){
 	kprintf("Testing two concurrent very long running processes\n");
 	char* policy[5] = {"blank","blank", "blank", "FIFO", "GCA "}; 
 	uint32 starttime = clktime;
-	int32 numPages = 16;
+	int32 numPages = 32;
 	int32 numLoops = 25000;
 	uint32 pfcstart = pfc;
 	kprintf("START: POLICY = %s, NFRAMES = %d, NUMPAGES, = %d, Page Fault Count = %d, Time = %d\n", policy[currpolicy], NFRAMES, numPages, pfc-pfcstart, clktime-starttime);
@@ -281,8 +284,8 @@ void test10(void){
 	if(s == SYSERR) kprintf("FAIL: semcreate returned syserr\n");
 	pid32 p1 = vcreate(looper, INITSTK, numPages, INITPRIO, "proc1", 4, numPages, numLoops, s, 1);  	
 	resume(p1);
-	pid32 p2 = vcreate(looper, INITSTK, numPages, INITPRIO, "proc1", 4, numPages, numLoops, -1, 1);  	
-	resume(p2);
+	//pid32 p2 = vcreate(looper, INITSTK, numPages, INITPRIO, "proc1", 4, numPages, numLoops, -1, 1);  	
+	//resume(p2);
 
 	if(SYSERR == wait(s))
 		kprintf("FAIL: wait failed on sid %d\n", s);
@@ -313,6 +316,38 @@ void test11(void){
 
 	kprintf("TEST PASS\n");
 	kprintf("=============== END OF TEST 11 =============\n");
+}
+
+void test12(void){
+	kprintf("\n=================== TEST 12 ================\n");
+	kprintf("Testing if vgetmem can crash the program\n");
+	int32 numPages = 20;
+
+	sid32 s = semcreate(0);
+	if(s == SYSERR) kprintf("FAIL: semcreate returned syserr\n");
+	pid32 p1 = vcreate(allocator, INITSTK, numPages, INITPRIO, "proc1", 2, numPages, s);  	
+	resume(p1);
+
+	if(SYSERR == wait(s))
+		kprintf("FAIL: wait failed on sid %d\n", s);
+
+
+	kprintf("TEST PASS\n");
+	kprintf("=============== END OF TEST 12 =============\n");
+
+
+}
+
+void allocator(uint32 numPages, sid32 s){
+	kprintf("Allocator calling vgetmem(%d)\n", numPages*NBPG);
+	char* p = vgetmem(numPages*NBPG);
+	kprintf("gotmem: 0x%08x\n", p);
+	
+	
+	vfreemem(p, numPages*NBPG);
+	signal(s);	
+	kprintf("allocator exit\n");
+
 }
 
 void gcaTest(uint32 numPages, sid32 s){
@@ -442,6 +477,7 @@ void readmem(uint32* p, uint32 numPages, uint32 count){
 		mem = *p;
 		if(val != mem){
 			kprintf("Addr: 0x%08x, data: 0x%08x, expected: 0x%08x, second read = 0x%08x, loop = %d pid = %d\n", p, mem, val, *p, count, currpid);
+			kprintf("expected call1: 0x%08x, call2: 0x%08x, original: 0x%08x\n", get_test_value3(p, count), get_test_value3(p, count), val);
 			char* faddr = vaddr2paddr((char*)((uint32)p & 0xFFFFF000), (char*)0);	
 			kprintf("Next 3 expected values: 0x%08x, 0x%08x, 0x%08x\n", get_test_value3(p + 1, count), get_test_value3(p + 2, count), get_test_value3(p + 3, count));
 			dumpframe(faddr2frameNum(faddr));	

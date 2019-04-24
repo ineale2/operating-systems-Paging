@@ -219,8 +219,12 @@ static void initialize_paging()
 	// Initialize counters
 	pfc = 0;
 	pf_sem = semcreate(1);	
+	if(pf_sem == SYSERR){
+		kprintf("could not create pf_sem\n");
+	}
 	free_bs_count = MAX_BS_ENTRIES;;
 
+	frame_dump_flag = 0;
 	// Initialize inverted page table
 	init_ipt();	
 

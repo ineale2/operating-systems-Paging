@@ -2,6 +2,7 @@
 
 void freeFrame(uint32 fr){
 	// Mark the frame as free
+	kprintf("freeFrame: fr = %d\n", fr);
 	if(currpolicy == FIFO && ipt[fr].status == PAGE){
 		//Remove from the queue
 		freeFrameFIFO(fr);
@@ -297,12 +298,17 @@ void evictFrame(uint32 fr){
 		}
 		// Store changes in backing store
 		debug("write: pid = %d vpn = %04d fr = %d bsd = %d offset = %04d\n", currpid, vp, fr, bsd, offset);
+		debug("write_bs: faddr = 0x%08x\n", faddr);
 		s = write_bs(faddr, bsd, offset);
+		dumpframe(fr);
 		debug("writeBS: proc %d done\n", currpid);
 		debug("after write_bs\n");
 		if( s == SYSERR){
 			panic("PANIC: write_bs failed\n");
 		}
+		// Clear dirty bit and avail bit
+		pt[pti].pt_dirty = 0;
+		pt[pti].pt_avail = 0;
 	}
 	hook_pswap_out(pid, vp, fr + FRAME0);
 }
@@ -313,7 +319,8 @@ void decRefCount(pt_t* pt, pd_t* pd, uint32 pdi){
 	/* If the reference count for this page table reaches zero, none of its pages are in memory 	*/
 	/* In this case, the page table itself should be removed from memory and PDIR set accordingly 	*/
 	if(ipt[fr].refCount <= 0){
-		debug("decRefCount: deleting page table PDI = %d from pd at 0x%08x, pt in fr = %d\n", pdi, pd, fr);
+		kprintf("decRefCount: deleting page table PDI = %d from pd at 0x%08x, pt in fr = %d\n", pdi, pd, fr);
+		kprintf("decRefCount: ipt[fr].pid =  %d, ipt[fr].STATUS = %d\n", ipt[fr].pid, ipt[fr].status);
 		freeFrame(fr);
 		pd[pdi].pd_pres = 0;
 		hook_ptable_delete(fr + FRAME0);

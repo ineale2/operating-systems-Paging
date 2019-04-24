@@ -8,6 +8,9 @@
  *  otherwise.
  *----------------------------------------------------------------------------
  */
+
+local void  dumpRDBLK(int i, uint32* p);
+
 syscall write_bs (char *src, bsd_t bs_id, uint32 page)
 {
 	uint32 rd_blk = 0;
@@ -43,18 +46,33 @@ syscall write_bs (char *src, bsd_t bs_id, uint32 page)
 	 * FIXME : Check id read on RDISK takes blocks from 0 ...
 	 */
 	rd_blk = (bs_id * RD_PAGES_PER_BS + page)*8;
-	int attempts = 10;
+	kprintf("\n=============== WRITE  BS ================\n");
+	kprintf("write_bs: into rd_blk = %u, from addr 0x%08x, bsd = %d, page = %u \n", rd_blk, src, bs_id, page);
+
 	for(i=0; i< 8; i++){
-		//kprintf("write_bs iteration [%d]\r\n", i);
+		kprintf("write_bs iteration [%d]\r\n", i);
 		memcpy((char *)buf, (char *)(src+i*RD_BLKSIZ),  RD_BLKSIZ);
+		dumpRDBLK(i,(uint32*)buf); 
 		while(write(WRDISK, buf, rd_blk+i) == SYSERR){
-			if(attempts-- == 0){
-				panic("Could not write to backing store \r\n");
-			}
+			kprintf("retying write_bs...\n");
+			//panic("Could not write to backing store \r\n");
 		}
 	}
-	// Increment counter
-	//wbsc++;
+	kprintf("\n============= END WRITE BS ==============\n");
 
 	return OK;
+}
+
+void dumpRDBLK(int i, uint32* p){
+	kprintf("\n================== DUMPING BLK %d ==================\n", i);
+	frame_dump_flag = 1;
+	kprintf("\n");
+	uint32* end =(uint32*) ((char*)p + RD_BLKSIZ);
+	int count = 0;
+	while(p < end){
+		kprintf("buf[%d]:0x%x\n", count, *p);
+		p = p + 1;	
+		count++;
+	}
+	kprintf("=================== END DUMP BLK %d ================\n\n", i);
 }

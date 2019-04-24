@@ -1,7 +1,7 @@
 /* paging.h */
 
 /* Helpful control macros for debugging and printing */
-#define XDEBUG 		0
+#define XDEBUG 		1
 
 #if XDEBUG
 #define debug(...) kprintf(__VA_ARGS__)
@@ -55,7 +55,7 @@ typedef struct {
 #define VPN0		4096    /* First page in VHEAP  */
 
 #ifndef NFRAMES
-#define NFRAMES		300  	/* number of frames		*/
+#define NFRAMES		28   	/* number of frames		*/
 #endif
 
 #define MAP_SHARED 1
@@ -137,4 +137,6 @@ void printPTE(pt_t* pt, uint32 pti);
 void printErrCode(uint32 e);
 void printPT(pt_t* pt);
 void printPD(pd_t* pd);
+
+int	frame_dump_flag;
 #endif // __PAGING_H_

@@ -69,8 +69,13 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 	debug("bs_info for READ\n");
 	get_bs_info(currpid, a, &bsd, &offset);
 
+	// Update the page table entry, point it to the frame and set bits	
+	pt[pti].pt_pres = 1;
+	set_PTE_addr(&pt[pti], faddr);
+
 	// Copy the page in the backing store to the new frame
 	debug("read:  pid = %d vpn = %04d fr = %d bsd = %d offset = %04d\n", currpid, vpn, fr, bsd, offset);
+	debug("read_bs: faddr = 0x%08x\n", faddr);
 	e = read_bs(faddr, bsd, offset);
 	debug("read_bs: proc %d done\n", currpid);
 	if(e == SYSERR){
@@ -79,9 +84,6 @@ void pf_handler(void){ //Interrupts are disabled by pf_dispatcher
 	// Increment reference count of the frame that holds pt
 	incRefCount(pt);
 
-	// Update the page table entry, point it to the frame and set bits	
-	pt[pti].pt_pres = 1;
-	set_PTE_addr(&pt[pti], faddr);
 
 	debug("Mapping on Exit: va = 0x%08x maps to 0x%08x\n", a, vaddr2paddr(a, faddr));
 	hook_pfault(currpid, a, vpn, fr + FRAME0); 
@@ -99,6 +101,7 @@ void init_gpt(){
 		debug("gpt[%d] = 0x%x\n", j, gpt[j]);
 		//Allocate some space for a pt
 		setup_id_paging((pt_t*)gpt[j], (char*)(j << 22));
+		hook_ptable_create(faddr2frameNum((char*)gpt[j]) + FRAME0);
 	}
 	// Initialize device page tables (starting at 0x9000000, 1024 pages)
 	dpt = getNewFrame(PTAB, GLOBAL, NO_VPN);
@@ -360,6 +363,7 @@ void printPTE(pt_t* pt, uint32 pti){
 
 void dumpframe(uint32 fr){
 	kprintf("\n================== DUMPING FRAME %d ==================\n", fr);
+	frame_dump_flag = 1;
 	kprintf("\n");
 	uint32* p = (uint32*)frameNum2ptr(fr);;
 	uint32* end =(uint32*) ((char*)p + NBPG);
