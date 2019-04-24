@@ -46,13 +46,13 @@ process	main(void)
   /* DO NOT REMOVE OR COMMENT THIS CALL */
   psinit();
 
- //	page_policy_test();
+// 	page_policy_test();
 
   	kprintf("TESTING START\n");
 //	test1();
 //	test2();
-///	test4();
-///	test5();
+//	test4();
+//	test5();
 //	test6();
 //	test7(24);
 	//test7_wrapper();

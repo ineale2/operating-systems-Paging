@@ -87,6 +87,7 @@ void init_gpt(){
 		gpt[j] = getNewFrame(PTAB, GLOBAL, NO_VPN);
 		//Allocate some space for a pt
 		setup_id_paging((pt_t*)gpt[j], (char*)(j << 22));
+		hook_ptable_create(faddr2frameNum(gpt[j]) + FRAME0);
 	}
 	// Initialize device page tables (starting at 0x9000000, 1024 pages)
 	dpt = getNewFrame(PTAB, GLOBAL, NO_VPN);

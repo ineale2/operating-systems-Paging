@@ -289,6 +289,9 @@ void evictFrame(uint32 fr){
 		if( s == SYSERR){
 			panic("PANIC: write_bs failed\n");
 		}
+		// Reset dirty and avail bit 
+		pt[pti].pt_dirty = 0;
+		pt[pti].pt_avail = 0;
 	}
 	hook_pswap_out(pid, vp, fr + FRAME0);
 }
