@@ -55,7 +55,7 @@ typedef struct {
 #define VPN0		4096    /* First page in VHEAP  */
 
 #ifndef NFRAMES
-#define NFRAMES		300   	/* number of frames		*/
+#define NFRAMES		28    	/* number of frames		*/
 #endif
 
 #define MAP_SHARED 1

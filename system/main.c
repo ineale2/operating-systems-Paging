@@ -30,7 +30,7 @@ extern void page_policy_test(void);
 
 process	main(void)
 {
-  srpolicy(FIFO);
+  srpolicy(GCA);
 
   /* Start the network */
   /* DO NOT REMOVE OR COMMENT BELOW */
@@ -55,12 +55,12 @@ process	main(void)
 //	test5();
 //	test6();
 //	test7(24);
-	//test7_wrapper();
+	test7_wrapper();
 //	test8();
 //	test9();
 //	test10();
 //	test11();
-	test3();
+//	test3();
 	kprintf("END OF ALL TESTS\n");
   return OK;
 }
@@ -227,7 +227,7 @@ void test7(uint32 numPages){
 
 void test7_wrapper(void){
 	int i;
-	for( i = 10; i <= 90; i+=4){
+	for( i = 10; i <= 60; i+=4){
 		test7(i);
 	}  
 
